@@ -1,0 +1,22 @@
+#include <windows.h>
+1 ICON "assets/NovaMix.ico"
+1 VERSIONINFO
+ FILEVERSION 0,20,7,0
+ PRODUCTVERSION 0,20,7,0
+ FILETYPE VFT_APP
+BEGIN
+ BLOCK "StringFileInfo"
+ BEGIN
+  BLOCK "040904B0"
+  BEGIN
+   VALUE "FileDescription", "NovaMix - Arctis mixer"
+   VALUE "ProductName", "NovaMix"
+   VALUE "FileVersion", "0.20.7"
+   VALUE "ProductVersion", "0.20.7"
+  END
+ END
+ BLOCK "VarFileInfo"
+ BEGIN
+  VALUE "Translation", 0x409, 1200
+ END
+END

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="it" data-accent="mint">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="novamix-token" content="__TOKEN__">
+  <title>NovaMix</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+<main class="app">
+  <header class="app-header">
+    <div class="brand" aria-label="NovaMix">
+      <span class="brand-mark"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 23V9l16 14V9M4 13v6M28 13v6"/></svg></span>
+      <span>NovaMix</span>
+    </div>
+    <button id="enabled" class="primary">Configura flussi</button>
+  </header>
+  <div class="device-line">
+    <span id="dot" class="dot" aria-hidden="true"></span>
+    <span>Arctis Nova Pro Wireless</span>
+    <span class="device-divider" aria-hidden="true">/</span>
+    <span id="connection" class="muted">Connessione…</span>
+  </div>
+  <nav class="navigation" aria-label="Sezioni">
+    <div class="tabs">
+      <button class="tab selected" data-panel="mixer" aria-controls="mixer">Mixer</button>
+      <button class="tab" data-panel="streams" aria-controls="streams">Flussi</button>
+      <button class="tab" data-panel="settings" aria-controls="settings">Preferenze</button>
+    </div>
+    <span id="status-pill" class="status-pill">In pausa</span>
+  </nav>
+  <div id="alert" class="alert" role="alert" hidden></div>
+
+  <section id="mixer" class="panel" aria-label="Mixer audio">
+    <article class="mix-card">
+      <div class="section-heading">
+        <div><h1>ChatMix</h1><p class="description">Il giusto spazio per ogni voce.</p></div>
+        <button id="center" class="quiet center-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/></svg>Centra</button>
+      </div>
+      <div class="mix-values">
+        <div class="channel pc-channel">
+          <span class="channel-label"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>PC</span>
+          <strong id="pc-value">100<span>%</span></strong>
+        </div>
+        <span class="balance-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h16m-4-4 4 4-4 4M20 16H4m4-4-4 4 4 4"/></svg></span>
+        <div class="channel chat-channel">
+          <span class="channel-label">Chat<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6 3V6a2 2 0 0 1 2-2Z"/><path d="M8 10h8M8 14h5"/></svg></span>
+          <strong id="chat-value">100<span>%</span></strong>
+        </div>
+      </div>
+      <div class="balance-control">
+        <span class="balance-center" aria-hidden="true"></span>
+        <input type="range" id="balance" min="-100" max="100" step="1" value="0" aria-label="Bilanciamento PC e Chat" class="mix-range" disabled>
+      </div>
+      <div class="range-ends"><span>Più PC</span><span>Centro</span><span>Più Chat</span></div>
+      <div class="fine-controls">
+        <p>Regola con precisione</p>
+        <div class="fine-buttons" role="group" aria-label="Regolazione precisa del ChatMix">
+          <button id="fine-pc" class="fine-button" aria-label="Sposta il ChatMix dell'uno per cento verso il PC"><span aria-hidden="true">−</span> PC <small>1%</small></button>
+          <button id="fine-chat" class="fine-button" aria-label="Sposta il ChatMix dell'uno per cento verso il flusso Chat">Chat <small>1%</small><span aria-hidden="true">+</span></button>
+        </div>
+      </div>
+    </article>
+    <p id="base-mix-note" class="base-note">ChatMix, volume, microfono e batterie anche sul display della base.</p>
+
+    <div class="volume-card" aria-label="Volumi">
+      <article class="volume-row">
+        <div class="control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 14v-3a9 9 0 0 1 18 0v3M3 12h3v8H3zM18 12h3v8h-3z"/></svg></div>
+        <div class="volume-content">
+          <div class="volume-heading"><label for="physical">Volume cuffie</label><output id="physical-value" for="physical">—</output></div>
+          <input type="range" id="physical" min="0" max="100" step="1" value="0" aria-describedby="physical-help" disabled>
+          <p id="physical-help" class="control-help">Il livello fisico non è ancora rilevato.</p>
+        </div>
+      </article>
+      <article class="volume-row software-volume">
+        <div class="control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 5-6 5H2v4h3l6 5V5ZM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/></svg></div>
+        <div class="volume-content">
+          <div class="volume-heading"><label for="master">Volume del mix</label><output id="master-value" for="master">100%</output></div>
+          <input type="range" id="master" min="0" max="100" step="1" value="100" aria-describedby="master-help" disabled>
+          <p id="master-help" class="control-help">Regola il livello dei due flussi riprodotti da NovaMix.</p>
+        </div>
+      </article>
+    </div>
+
+    <div class="hardware-card">
+      <div class="microphone">
+        <div class="control-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></div>
+        <div class="mic-copy"><h2>Microfono</h2><p id="mic-help" class="control-help">In attesa dello stato delle cuffie.</p></div>
+        <span id="mic-value" class="mic-pill">Non rilevato</span>
+      </div>
+      <div id="battery" class="battery" hidden></div>
+    </div>
+  </section>
+
+  <section id="streams" class="panel streams-card" aria-labelledby="streams-title" hidden>
+    <h2 id="streams-title">Percorso audio</h2>
+    <p class="control-help">Scegli due uscite distinte per PC e Chat, poi indica le cuffie. Usa uscite virtuali o una presa digitale libera.</p>
+    <div class="route-field">
+      <label for="route-pc">Flusso PC</label>
+      <select id="route-pc"><option value="0">Seleziona un’uscita</option></select>
+      <p class="control-help">Imposta questa uscita come predefinita in Windows dopo aver avviato i flussi.</p>
+      <label class="meter-label" for="signal-pc">Segnale PC</label>
+      <meter id="signal-pc" min="0" max="100" value="0"></meter>
+    </div>
+    <div class="route-field">
+      <label for="route-chat">Flusso Chat</label>
+      <select id="route-chat"><option value="0">Seleziona un’uscita</option></select>
+      <p class="control-help">Assegna questa uscita a tutte le app che vuoi nel flusso Chat, per esempio Discord, WhatsApp e Telegram. Usa le impostazioni audio dell’app o il Mixer volume di Windows.</p>
+      <label class="meter-label" for="signal-chat">Segnale Chat</label>
+      <meter id="signal-chat" min="0" max="100" value="0"></meter>
+    </div>
+    <div class="route-field">
+      <label for="route-out">Riproduci sulle cuffie</label>
+      <select id="route-out"><option value="0">Seleziona un’uscita</option></select>
+    </div>
+    <p id="route-status" class="control-help" role="status">Ricerca delle uscite di Windows…</p>
+    <p class="control-help">Per tornare al percorso diretto, seleziona le cuffie in Windows e nelle app che avevi assegnato al flusso Chat.</p>
+  </section>
+
+  <section id="settings" class="panel" aria-label="Preferenze" hidden>
+    <div class="settings-heading"><h1>Fallo tuo.</h1><p class="description">Aspetto e controlli del mixer.</p></div>
+    <div class="settings-card">
+      <label class="setting language-setting"><strong>Lingua / Language</strong><select id="language">
+        <option value="0">Italiano</option><option value="1">English</option>
+      </select></label>
+    </div>
+    <section class="appearance-card" aria-label="Aspetto">
+      <div><h2>Colore d’accento</h2><p class="control-help">Un dettaglio, il tuo stile.</p></div>
+      <div class="accent-options" role="group" aria-label="Colore d’accento">
+        <button class="accent-option" data-accent="mint" aria-pressed="true"><span class="color-swatch mint" aria-hidden="true"></span>Menta</button>
+        <button class="accent-option" data-accent="blue" aria-pressed="false"><span class="color-swatch blue" aria-hidden="true"></span>Blu</button>
+        <button class="accent-option" data-accent="violet" aria-pressed="false"><span class="color-swatch violet" aria-hidden="true"></span>Viola</button>
+      </div>
+    </section>
+    <section class="settings-card tray-settings" aria-labelledby="tray-settings-title">
+      <div class="tray-heading">
+        <h2 id="tray-settings-title">Barra delle applicazioni</h2>
+        <p class="control-help">Personalizza l’indicatore delle cuffie vicino all’orologio.</p>
+      </div>
+      <label class="setting"><span><strong>Mostra la percentuale</strong><small>Visualizza la carica in cifre direttamente sulla barra. Passa il puntatore sull’icona per leggere la percentuale completa.</small></span><input id="batteryPercent" type="checkbox" role="switch"><span class="switch" aria-hidden="true"></span></label>
+      <div class="tray-colors" role="group" aria-label="Colori della batteria">
+        <label><input id="batteryLow" type="color" value="#ff8f91"><span>Bassa<small id="battery-low-range">0–25%</small></span></label>
+        <label><input id="batteryMedium" type="color" value="#ffc36d"><span>Media<small id="battery-medium-range">26–50%</small></span></label>
+        <label><input id="batteryNormal" type="color" value="#79e4b9"><span>Normale<small id="battery-normal-range">51–100%</small></span></label>
+      </div>
+      <label class="tray-threshold" for="batteryMediumLimit"><span>Da normale a media</span><span><input id="batteryMediumLimit" type="number" min="1" max="99" value="50" required> %</span></label>
+      <label class="tray-threshold" for="batteryLowLimit"><span>Da media a bassa</span><span><input id="batteryLowLimit" type="number" min="0" max="98" value="25" required> %</span></label>
+      <p id="battery-band-error" class="control-help tray-band-error" role="status" hidden>La soglia bassa deve essere inferiore alla soglia media.</p>
+      <label class="setting"><span><strong>Avviso batteria</strong><small>Ricevi una notifica di Windows quando la carica raggiunge o scende sotto la soglia.</small></span><input id="batteryNotify" type="checkbox" role="switch"><span class="switch" aria-hidden="true"></span></label>
+      <label class="tray-threshold" for="batteryThreshold"><span>Soglia di avviso</span><span><input id="batteryThreshold" type="number" min="1" max="99" value="25" required> %</span></label>
+    </section>
+    <div class="settings-card">
+      <label class="setting"><span><strong>Curva ChatMix più graduale</strong><small>Passi più piccoli vicino allo zero e al centro. I pulsanti nel mixer regolano sempre l’1%.</small></span><input id="gentleMix" type="checkbox" role="switch"><span class="switch" aria-hidden="true"></span></label>
+      <label class="setting"><span><strong>Mostra overlay</strong><small>Un riepilogo di ChatMix e volume vicino all’orologio.</small></span><input id="overlay" type="checkbox" role="switch"><span class="switch" aria-hidden="true"></span></label>
+      <label class="setting"><span><strong>Usa il volume della tastiera</strong><small>La rotella e i tasti regolano il volume fisico delle cuffie.</small></span><input id="keyboard" type="checkbox" role="switch"><span class="switch" aria-hidden="true"></span></label>
+      <label class="setting"><span><strong>Schermata NovaMix sulla base</strong><small>Mantiene visibili ChatMix, volume, microfono e batterie. Disattiva per tornare ai menu della base.</small></span><input id="oledMix" type="checkbox" role="switch"><span class="switch" aria-hidden="true"></span></label>
+      <label class="setting" id="oled-row"><span><strong>Avviso microfono sulla base</strong><small>Mostra un avviso quando la schermata NovaMix è disattivata.</small></span><input id="oled" type="checkbox" role="switch" disabled><span class="switch" aria-hidden="true"></span></label>
+    </div>
+    <p class="windows-note">I livelli delle app in Windows si applicano prima del bilanciamento dei due flussi.</p>
+    <div class="utility-row"><div><h2>Diagnostica</h2><p class="control-help">Stato del mixer e ultimi eventi delle cuffie.</p></div><button id="diagnostics" class="quiet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg>Esporta report</button></div>
+    <div class="utility-row"><div><h2>Chiudi NovaMix</h2><p class="control-help">Termina la riproduzione dei due flussi.</p></div><button id="quit" class="danger">Esci</button></div>
+  </section>
+
+  <footer>
+    <span class="version">NovaMix <span>0.20.7 · Due flussi</span><span id="preview-label" hidden> · Anteprima</span></span>
+    <button id="hide" class="background-button" title="Chiude la finestra; il mixer resta vicino all’orologio">Continua in background<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+  </footer>
+</main>
+<div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
