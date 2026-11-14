@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 #include <gdiplus.h>
 
 namespace trayStatus {
@@ -10,6 +11,7 @@ constexpr uint32_t mint = 0xff79e4b9, muted = 0xffff8f91, gray = 0xffbdc7d6;
 constexpr uint32_t rgbMask = 0xffffff, percentageStyle = 0x1000000;
 constexpr uint32_t backgroundStyle = 0x2000000;
 constexpr int fontSizeShift = 26;
+constexpr int backgroundSizeShift = 30;
 constexpr int defaultThreshold = 25;
 
 
@@ -17,6 +19,7 @@ struct BatterySettings {
     bool showPercent = false;
     bool background = true;
     int fontSize = 12;
+    int backgroundSize = 16;
     bool notify = false;
     int threshold = defaultThreshold;
     int lowLimit = 25, mediumLimit = 50;
@@ -26,11 +29,11 @@ struct BatterySettings {
         return low >= 0 && low < medium && medium < 100;
     }
 
-    uint32_t style(int percent) const {
+    uint64_t style(int percent) const {
         if (percent < 0) return gray & rgbMask;
         int color = percent <= lowLimit ? low : percent <= mediumLimit ? medium : normal;
-        const uint32_t numberStyle = percentageStyle | (background ? backgroundStyle : 0) |
-                                     (uint32_t(fontSize - 8) << fontSizeShift);
+        const uint64_t numberStyle = percentageStyle | (uint64_t(fontSize - 8) << fontSizeShift) |
+            (background ? backgroundStyle | (uint64_t(backgroundSize - 8) << backgroundSizeShift) : 0);
         return uint32_t(color) | (showPercent ? numberStyle : 0);
     }
 };
@@ -112,10 +115,17 @@ inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int
         SelectObject(dc, oldFont);
         DeleteObject(font);
         if (!rendered) break;
+        // Use coverage-weighted positioning for optical centering. Keep the
+        // visible bounds inside the icon, including asymmetric digits such as 1.
         ink = {canvas, canvas, 0, 0};
+        uint64_t totalCoverage = 0, weightedX = 0, weightedY = 0;
         for (int y = 0; y < canvas; ++y) {
             for (int x = 0; x < canvas; ++x) {
-                if (!(coverage[y * canvas + x] & 255)) continue;
+                const auto alpha = coverage[y * canvas + x] & 255;
+                totalCoverage += alpha;
+                weightedX += uint64_t(2 * x + 1) * alpha;
+                weightedY += uint64_t(2 * y + 1) * alpha;
+                if (alpha < 64) continue;
                 ink.left = std::min(ink.left, LONG(x));
                 ink.top = std::min(ink.top, LONG(y));
                 ink.right = std::max(ink.right, LONG(x + 1));
@@ -124,14 +134,19 @@ inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int
         }
         const int width = ink.right - ink.left, inkHeight = ink.bottom - ink.top;
         if (width <= 0 || inkHeight <= 0 || width > size || inkHeight > size - 2) continue;
-        const int left = (size - width) / 2, top = (size - inkHeight) / 2;
+        const double centerX = double(weightedX) / (2 * totalCoverage);
+        const double centerY = double(weightedY) / (2 * totalCoverage);
+        const int left = std::clamp(int(std::lround(size / 2.0 - centerX)) + int(ink.left), 0, size - width);
+        const int top = std::clamp(int(std::lround(size / 2.0 - centerY)) + int(ink.top), 0, size - inkHeight);
         // Grayscale coverage keeps the small glyph edges smooth without
         // ClearType's colored fringes. Composite the text over the tray tile.
-        for (int y = 0; y < inkHeight; ++y) {
-            for (int x = 0; x < width; ++x) {
-                const BYTE alpha = BYTE(coverage[(ink.top + y) * canvas + ink.left + x] & 255);
-                text.SetPixel(left + x, top + y, Gdiplus::Color(alpha, (color >> 16) & 255,
-                                                             (color >> 8) & 255, color & 255));
+        for (int y = 0; y < canvas; ++y) {
+            for (int x = 0; x < canvas; ++x) {
+                const BYTE alpha = BYTE(coverage[y * canvas + x] & 255);
+                const int targetX = left + x - ink.left, targetY = top + y - ink.top;
+                if (!alpha || targetX < 0 || targetX >= size || targetY < 0 || targetY >= size) continue;
+                text.SetPixel(targetX, targetY, Gdiplus::Color(alpha, (color >> 16) & 255,
+                                                           (color >> 8) & 255, color & 255));
             }
         }
         drawn = true;
@@ -147,9 +162,9 @@ inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int
     return drawn;
 }
 
-inline void battery(Gdiplus::Graphics& g, int percent, uint32_t style) {
+inline void battery(Gdiplus::Graphics& g, int percent, uint64_t style) {
     percent = std::min(percent, 100);
-    const uint32_t color = 0xff000000 | (style & rgbMask);
+    const uint32_t color = 0xff000000 | uint32_t(style & rgbMask);
     tile(g, 0.3f, 3, 13.8f, 10, 2.4f, outline);
     tile(g, 13, 5.5f, 2.7f, 5, 1.2f, outline);
     tile(g, 13.4f, 6.5f, 1.3f, 3, 0.5f, white);
@@ -163,7 +178,7 @@ inline void battery(Gdiplus::Graphics& g, int percent, uint32_t style) {
     }
 }
 
-inline HICON createIcon(bool mic, int value, int size, uint32_t style = 0) {
+inline HICON createIcon(bool mic, int value, int size, uint64_t style = 0) {
     struct Runtime {
         ULONG_PTR token = 0;
         Runtime() { Gdiplus::GdiplusStartupInput input; Gdiplus::GdiplusStartup(&token, &input, nullptr); }
@@ -181,12 +196,16 @@ inline HICON createIcon(bool mic, int value, int size, uint32_t style = 0) {
         graphics.ScaleTransform(scale, scale);
         if (mic) microphone(graphics, value);
         else if (value < 0 || !(style & percentageStyle)) battery(graphics, value, style);
-        else if (style & backgroundStyle) tile(graphics, 0.5f, 0.5f, 15, 15, 4,
-                                              0xff000000 | (style & rgbMask));
+        else if (style & backgroundStyle) {
+            const float side = float((style >> backgroundSizeShift) & 15) + 8;
+            const float inset = (glyphSize - side) / 2;
+            graphics.SetPixelOffsetMode(Gdiplus::PixelOffsetModeNone);
+            tile(graphics, inset, inset, side, side, 1, 0xff000000 | uint32_t(style & rgbMask));
+        }
     }
     if (!mic && value >= 0 && (style & percentageStyle)) {
-        const uint32_t color = (style & backgroundStyle) ? 0xffffff : style & rgbMask;
-        const int fontSize = int(style >> fontSizeShift) + 8;
+        const uint32_t color = (style & backgroundStyle) ? 0xffffff : uint32_t(style & rgbMask);
+        const int fontSize = int((style >> fontSizeShift) & 15) + 8;
         if (!percentage(bitmap, std::min(value, 100), color, size, fontSize)) return nullptr;
     }
     HICON icon = nullptr;
@@ -206,7 +225,7 @@ class Icon {
     GUID guid;
     bool registered = false;
     int lastValue = unknown, lastSize = 0;
-    uint32_t lastStyle = 0;
+    uint64_t lastStyle = 0;
     bool lastEnglish = false;
     ULONGLONG retryAt = 0;
 
@@ -225,7 +244,7 @@ class Icon {
 public:
     Icon(UINT id, GUID guid) : id(id), guid(guid) {}
 
-    void update(HWND owner, bool temporary, int value, int size, bool force, bool english, uint32_t style = 0) {
+    void update(HWND owner, bool temporary, int value, int size, bool force, bool english, uint64_t style = 0) {
         if (!force && !retryAt && registered && value == lastValue && size == lastSize && style == lastStyle && english == lastEnglish) return;
         auto now = GetTickCount64();
         if (!force && now < retryAt) return;

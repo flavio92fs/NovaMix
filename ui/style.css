@@ -124,6 +124,7 @@ input.mix-range { position: relative; height: 6px; margin: 0; background: linear
 .color-swatch.blue { background: #9ecbff; }
 .color-swatch.violet { background: #c9b6ff; }
 .settings-card { padding: 0 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 13px; }
+.language-card { margin-bottom: 15px; }
 .setting { display: flex; position: relative; align-items: center; justify-content: space-between; gap: 24px; padding: 17px 0; cursor: pointer; }
 .setting + .setting { border-top: 1px solid var(--line); }
 .setting > span:first-child { flex: 1; }

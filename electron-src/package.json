@@ -1,7 +1,7 @@
 {
   "name": "novamix-ui",
   "productName": "NovaMix",
-  "version": "0.20.10",
+  "version": "0.20.11",
   "description": "NovaMix desktop interface for the native C++ audio engine.",
   "private": true,
   "license": "MIT",

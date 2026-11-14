@@ -421,7 +421,12 @@ int testCore(){
   settings.background = true;
   settings.fontSize = 12;
   expect((settings.style(25) & trayStatus::backgroundStyle) != 0);
-  expect(int(settings.style(25) >> trayStatus::fontSizeShift) + 8 == 12);
+  expect(int((settings.style(25) >> trayStatus::fontSizeShift) & 15) + 8 == 12);
+  expect(int((settings.style(25) >> trayStatus::backgroundSizeShift) & 15) + 8 == 16);
+  const auto largeBackground = settings.style(25);
+  settings.backgroundSize = 12;
+  expect(settings.style(25) != largeBackground);
+  expect(int((settings.style(25) >> trayStatus::fontSizeShift) & 15) + 8 == 12);
   for (int size : {16, 20, 24, 32}) {
    for (int value : {-1, 0, 8, 25, 99, 100}) {
     HICON icon = trayStatus::createIcon(false, value, size, settings.style(value));

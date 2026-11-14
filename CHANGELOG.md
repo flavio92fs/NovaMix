@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.11
+
+- Separates the Language and Accent color cards with consistent spacing.
+- Adds an independent background size setting from 8 to 16 pixels. The default square uses the full tray icon area.
+- Centers the visible number while retaining its complete antialiased edges.
+
 ## 0.20.10
 
 - Uses smaller regular Segoe UI digits with an adjustable size from 8 to 16 pixels.

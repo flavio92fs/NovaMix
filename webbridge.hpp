@@ -20,6 +20,7 @@ void savePreferences(const fs::path& filename=fs::path(exeDir())/L"streams.ini")
  add(L"batteryPercent",s.trayBattery.showPercent);
  add(L"batteryBackground",s.trayBattery.background);
  add(L"batteryFontSize",s.trayBattery.fontSize);
+ add(L"batteryBackgroundSize",s.trayBattery.backgroundSize);
  add(L"batteryNotify",s.trayBattery.notify);
  add(L"batteryThreshold",s.trayBattery.threshold);
  add(L"batteryLowLimit",s.trayBattery.lowLimit);
@@ -53,6 +54,7 @@ void loadPreferences(const fs::path& filename=fs::path(exeDir())/L"streams.ini")
  shared.trayBattery.showPercent=batteryPref(L"batteryPercent",defaults.showPercent)!=0;
  shared.trayBattery.background=batteryPref(L"batteryBackground",defaults.background)!=0;
  shared.trayBattery.fontSize=std::clamp(batteryPref(L"batteryFontSize",defaults.fontSize),8,16);
+ shared.trayBattery.backgroundSize=std::clamp(batteryPref(L"batteryBackgroundSize",defaults.backgroundSize),8,16);
  shared.trayBattery.notify=batteryPref(L"batteryNotify",defaults.notify)!=0;
  shared.trayBattery.threshold=std::clamp(batteryPref(L"batteryThreshold",defaults.threshold),1,99);
  int lowLimit=batteryPref(L"batteryLowLimit",defaults.lowLimit);
@@ -76,11 +78,12 @@ void loadPreferences(const fs::path& filename=fs::path(exeDir())/L"streams.ini")
 std::string stateJson(){
  std::lock_guard<std::mutex> lock(mutexState);
  const auto& s=shared;auto displayed=mix::volumeDisplay(s.physical,s.volumeControl,GetTickCount64());std::ostringstream j;
- j<<"{\"version\":\"0.20.10\",\"enabled\":"<<s.enabled<<",\"accent\":"<<s.accent<<",\"gentleMix\":"<<s.gentleMix<<",\"audio\":"<<s.audio<<",\"hid\":"<<s.hid<<",\"game\":"<<s.levels.pc<<",\"chat\":"<<s.levels.chat<<",\"balance\":"<<mix::position(s.levels)<<",\"baseGame\":"<<(s.baseLevels?s.baseLevels->pc:-1)<<",\"baseChat\":"<<(s.baseLevels?s.baseLevels->chat:-1)<<",\"master\":"<<s.master<<",\"physical\":"<<s.physical<<",\"physicalDisplay\":"<<displayed.percent<<",\"physicalPending\":"<<displayed.pending<<",\"mic\":"<<s.mic<<",\"battery\":"<<s.battery<<",\"chargerBattery\":"<<s.chargerBattery<<",\"charging\":"<<s.charging<<",\"overlay\":"<<s.overlay<<",\"keyboard\":"<<s.keyboardWanted<<",\"keyboardActive\":"<<s.keyboardActive<<",\"oled\":"<<s.oledHints<<",\"oledMix\":"<<s.oledMix<<",\"preview\":"<<preview<<",\"device\":"<<jsonText(s.endpoint)<<",\"notice\":"<<jsonText(s.notice)<<",\"error\":"<<jsonText(s.audioError)<<",\"hidError\":"<<jsonText(s.hidError)<<",\"syncError\":"<<jsonText(s.mixSyncError)<<",\"volumeSyncError\":"<<jsonText(s.volumeSyncError)<<"}";
+ j<<"{\"version\":\"0.20.11\",\"enabled\":"<<s.enabled<<",\"accent\":"<<s.accent<<",\"gentleMix\":"<<s.gentleMix<<",\"audio\":"<<s.audio<<",\"hid\":"<<s.hid<<",\"game\":"<<s.levels.pc<<",\"chat\":"<<s.levels.chat<<",\"balance\":"<<mix::position(s.levels)<<",\"baseGame\":"<<(s.baseLevels?s.baseLevels->pc:-1)<<",\"baseChat\":"<<(s.baseLevels?s.baseLevels->chat:-1)<<",\"master\":"<<s.master<<",\"physical\":"<<s.physical<<",\"physicalDisplay\":"<<displayed.percent<<",\"physicalPending\":"<<displayed.pending<<",\"mic\":"<<s.mic<<",\"battery\":"<<s.battery<<",\"chargerBattery\":"<<s.chargerBattery<<",\"charging\":"<<s.charging<<",\"overlay\":"<<s.overlay<<",\"keyboard\":"<<s.keyboardWanted<<",\"keyboardActive\":"<<s.keyboardActive<<",\"oled\":"<<s.oledHints<<",\"oledMix\":"<<s.oledMix<<",\"preview\":"<<preview<<",\"device\":"<<jsonText(s.endpoint)<<",\"notice\":"<<jsonText(s.notice)<<",\"error\":"<<jsonText(s.audioError)<<",\"hidError\":"<<jsonText(s.hidError)<<",\"syncError\":"<<jsonText(s.mixSyncError)<<",\"volumeSyncError\":"<<jsonText(s.volumeSyncError)<<"}";
  j.seekp(-1, std::ios_base::end);
  j << ",\"language\":" << s.english << ",\"batteryPercent\":" << s.trayBattery.showPercent
    << ",\"batteryBackground\":" << s.trayBattery.background
    << ",\"batteryFontSize\":" << s.trayBattery.fontSize
+   << ",\"batteryBackgroundSize\":" << s.trayBattery.backgroundSize
    << ",\"batteryNotify\":" << s.trayBattery.notify
    << ",\"batteryThreshold\":" << s.trayBattery.threshold
    << ",\"batteryLowLimit\":" << s.trayBattery.lowLimit
@@ -136,7 +139,7 @@ class WebUi {
   bool range=name=="accent"?(n>=0&&n<=2):name=="balance"?(n>=-100&&n<=100):(n>=0&&n<=100);
   if (color) range=n>=0&&n<=int(trayStatus::rgbMask);
   if (name=="batteryThreshold") range=n>=1&&n<=99;
-  if (name=="batteryFontSize") range=n>=8&&n<=16;
+  if (name=="batteryFontSize"||name=="batteryBackgroundSize") range=n>=8&&n<=16;
   if (name=="batteryBands") range=trayStatus::BatterySettings::validLimits(n/100,n%100);
   if(flag?(n!=0&&n!=1):!range)return {400,"text/plain","Valore fuori intervallo"};
   if(name=="quit"){PostMessageW(windowH,EXIT_APP,0,0);return {200,"application/json","{\"ok\":true}"};}
@@ -162,6 +165,7 @@ class WebUi {
    else if(name=="batteryPercent")shared.trayBattery.showPercent=n!=0;
    else if(name=="batteryBackground")shared.trayBattery.background=n!=0;
    else if(name=="batteryFontSize")shared.trayBattery.fontSize=n;
+   else if(name=="batteryBackgroundSize")shared.trayBattery.backgroundSize=n;
    else if(name=="batteryNotify")shared.trayBattery.notify=n!=0;
    else if(name=="batteryThreshold")shared.trayBattery.threshold=n;
    else if(name=="batteryBands"){
@@ -209,7 +213,7 @@ public:
    const auto s = snapshot();
    auto label = [&s](const wchar_t* italian, const wchar_t* english) { return s.english ? english : italian; };
    std::wostringstream f;
-   f << L"NovaMix 0.20.10\nAudio: " << s.audio << L"\n" << s.audioError
+   f << L"NovaMix 0.20.11\nAudio: " << s.audio << L"\n" << s.audioError
      << L"\nHID: " << s.hid << L"\n" << s.hidError
      << label(L"\nMicrofono: ", L"\nMicrophone: ") << s.mic
      << label(L"\nVolume confermato/target raw/in attesa: ", L"\nConfirmed volume/raw target/pending: ")
@@ -273,6 +277,8 @@ public:
          route("batteryFontSize",17).code == 400);
   expect(route("batteryBackground",0).code == 202 && !shared.trayBattery.background);
   expect(route("batteryFontSize",10).code == 202 && shared.trayBattery.fontSize == 10);
+  expect(route("batteryBackgroundSize",7).code == 400 && route("batteryBackgroundSize",17).code == 400);
+  expect(route("batteryBackgroundSize",14).code == 202 && shared.trayBattery.backgroundSize == 14);
   expect(route("batteryPercent",1).code == 202 && route("batteryNotify",1).code == 202);
   expect(route("batteryThreshold",31).code == 202 && route("batteryLow",0x123456).code == 202);
   expect(route("batteryBands",4055).code == 202);
@@ -286,16 +292,18 @@ public:
   loadPreferences(settings);
   expect(shared.english == savedEnglish);
   expect(shared.trayBattery.showPercent && shared.trayBattery.notify &&
-         !shared.trayBattery.background && shared.trayBattery.fontSize == 10 &&
+         !shared.trayBattery.background && shared.trayBattery.fontSize == 10 && shared.trayBattery.backgroundSize == 14 &&
          shared.trayBattery.threshold == 31 && shared.trayBattery.low == 0x123456 &&
          shared.trayBattery.lowLimit == 40 && shared.trayBattery.mediumLimit == 55);
   expect(stateJson().find("\"batteryThreshold\":31") != std::string::npos);
   expect(stateJson().find("\"batteryBackground\":0") != std::string::npos &&
-         stateJson().find("\"batteryFontSize\":10") != std::string::npos);
+         stateJson().find("\"batteryFontSize\":10") != std::string::npos &&
+         stateJson().find("\"batteryBackgroundSize\":14") != std::string::npos);
   const auto legacy = fs::path(exeDir()) / L"test-legacy.ini";
   WritePrivateProfileStringW(L"NovaMix", L"batteryPercent", L"1", legacy.c_str());
   loadPreferences(legacy);
-  expect(shared.trayBattery.showPercent && shared.trayBattery.background && shared.trayBattery.fontSize == 12);
+  expect(shared.trayBattery.showPercent && shared.trayBattery.background && shared.trayBattery.fontSize == 12 &&
+         shared.trayBattery.backgroundSize == 16);
   DeleteFileW(legacy.c_str());
   loadPreferences(settings);
   expect(streamSetup.ready() && streamSetup.selected == std::array<std::wstring,3>{L"pc",L"chat",L"out"});
