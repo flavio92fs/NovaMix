@@ -80,7 +80,7 @@ const english = {
  "Chiudi NovaMix": "Quit NovaMix",
  "Termina la riproduzione dei due flussi.": "Stop playback of both streams.",
  "Esci": "Quit",
- "0.20.8 · Due flussi": "0.20.8 · Dual stream",
+ "0.20.9 · Due flussi": "0.20.9 · Dual stream",
  "· Anteprima": "· Preview",
  "Chiude la finestra; il mixer resta vicino all’orologio": "Close the window and keep the mixer running in the system tray",
  "Continua in background": "Keep running in background",

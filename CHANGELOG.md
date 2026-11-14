@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.9
+
+- Adds a rounded dark background behind the tray battery number, matching the microphone icon.
+- Keeps the native Segoe UI Semibold font and smooth text edges.
+
 ## 0.20.8
 
 - Renders battery numbers with Windows-hinted Segoe UI Semibold at the actual pixel size of the tray icon.

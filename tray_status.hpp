@@ -63,6 +63,11 @@ inline void microphone(Gdiplus::Graphics& g, int state) {
 }
 
 inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int size) {
+    Gdiplus::Bitmap text(size, size, PixelFormat32bppARGB);
+    {
+        Gdiplus::Graphics graphics(&text);
+        graphics.Clear(Gdiplus::Color(0, 0, 0, 0));
+    }
     // GDI hints the font at its final pixel size. Scaling glyph outlines afterwards
     // loses those adjustments and makes small tray numbers uneven or blurry.
     const int canvas = size * 3;
@@ -114,13 +119,13 @@ inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int
         const int width = ink.right - ink.left, inkHeight = ink.bottom - ink.top;
         if (width <= 0 || inkHeight <= 0 || width > size || inkHeight > size - 2) continue;
         const int left = (size - width) / 2, top = (size - inkHeight) / 2;
-        // Grayscale coverage gives smooth transparent edges without ClearType's
-        // colored fringes. The shell composites these pixels onto either theme.
+        // Grayscale coverage keeps the small glyph edges smooth without
+        // ClearType's colored fringes. Composite the text over the tray tile.
         for (int y = 0; y < inkHeight; ++y) {
             for (int x = 0; x < width; ++x) {
                 const BYTE alpha = BYTE(coverage[(ink.top + y) * canvas + ink.left + x] & 255);
-                bitmap.SetPixel(left + x, top + y, Gdiplus::Color(alpha, (color >> 16) & 255,
-                                                               (color >> 8) & 255, color & 255));
+                text.SetPixel(left + x, top + y, Gdiplus::Color(alpha, (color >> 16) & 255,
+                                                             (color >> 8) & 255, color & 255));
             }
         }
         drawn = true;
@@ -129,6 +134,10 @@ inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int
     SelectObject(dc, oldBitmap);
     DeleteDC(dc);
     DeleteObject(mask);
+    if (drawn) {
+        Gdiplus::Graphics graphics(&bitmap);
+        graphics.DrawImage(&text, 0, 0);
+    }
     return drawn;
 }
 
@@ -166,6 +175,7 @@ inline HICON createIcon(bool mic, int value, int size, uint32_t style = 0) {
         graphics.ScaleTransform(scale, scale);
         if (mic) microphone(graphics, value);
         else if (value < 0 || !(style & percentageStyle)) battery(graphics, value, style);
+        else tile(graphics, 0.5f, 0.5f, 15, 15, 4, outline);
     }
     if (!mic && value >= 0 && (style & percentageStyle) &&
         !percentage(bitmap, std::min(value, 100), style & rgbMask, size)) return nullptr;

@@ -34,7 +34,7 @@ You can use a different playback device, such as Bluetooth speakers. Select **St
 
 - **ChatMix** balances PC and Chat. At the center, both streams are at full level. The mix volume adjusts the combined output.
 - **Headset volume** adjusts the base’s physical volume. **Use keyboard volume controls** lets compatible media keys or wheels adjust that physical level. The base may show its own temporary volume pop-up.
-- **System tray** shows hardware microphone mute and headset battery status. Enable **Show battery level as digits** for Segoe UI Semibold numbers rendered at the current taskbar pixel size on a transparent background. Hover to see the full percentage. You can configure three colors, both thresholds and an optional low-battery notification. Pin the icons in Windows taskbar settings if they appear in the overflow menu.
+- **System tray** shows hardware microphone mute and headset battery status. Enable **Show battery level as digits** for Segoe UI Semibold numbers rendered at the current taskbar pixel size on a rounded dark background matching the microphone icon. Hover to see the full percentage. You can configure three colors, both thresholds and an optional low-battery notification. Pin the icons in Windows taskbar settings if they appear in the overflow menu.
 - **Base display** can show ChatMix, physical volume, hardware mute and battery readings. Those readings use the levels reported by the headset and base. Turning the display option off restores the base’s own menus.
 - **Settings → Language / Lingua** switches between **English** and **Italiano** and saves your preference. Windows display language determines the default. Closing the panel keeps the mixer running. Use **Quit** in the tray menu to stop it.
 
