@@ -125,7 +125,7 @@ inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int
                 totalCoverage += alpha;
                 weightedX += uint64_t(2 * x + 1) * alpha;
                 weightedY += uint64_t(2 * y + 1) * alpha;
-                if (alpha < 64) continue;
+                if (!alpha) continue;
                 ink.left = std::min(ink.left, LONG(x));
                 ink.top = std::min(ink.top, LONG(y));
                 ink.right = std::max(ink.right, LONG(x + 1));
@@ -136,8 +136,9 @@ inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int
         if (width <= 0 || inkHeight <= 0 || width > size || inkHeight > size - 2) continue;
         const double centerX = double(weightedX) / (2 * totalCoverage);
         const double centerY = double(weightedY) / (2 * totalCoverage);
-        const int left = std::clamp(int(std::lround(size / 2.0 - centerX)) + int(ink.left), 0, size - width);
-        const int top = std::clamp(int(std::lround(size / 2.0 - centerY)) + int(ink.top), 0, size - inkHeight);
+        const int left = int(std::lround(size / 2.0 - centerX)) + int(ink.left);
+        const int top = int(std::lround(size / 2.0 - centerY)) + int(ink.top);
+        if (left < 0 || left + width > size || top < 0 || top + inkHeight > size) continue;
         // Grayscale coverage keeps the small glyph edges smooth without
         // ClearType's colored fringes. Composite the text over the tray tile.
         for (int y = 0; y < canvas; ++y) {
