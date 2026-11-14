@@ -130,7 +130,7 @@ input.mix-range { position: relative; height: 6px; margin: 0; background: linear
 .setting strong { display: block; font-size: 14px; font-weight: 550; }
 .setting small { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); line-height: 1.5; max-width: 510px; }
 .setting input { position: absolute; right: 0; width: 40px; height: 24px; margin: 0; opacity: 0; }
-.switch { display: block; width: 40px; height: 24px; border-radius: 15px; background: #3a4449; flex-shrink: 0; transition: background-color 140ms; }
+.switch { display: block; width: 40px; height: 24px; border-radius: 15px; background: #3a4449; flex-shrink: 0; transition: background-color 140ms; pointer-events: none; }
 .switch::after { content: ""; display: block; width: 18px; height: 18px; margin: 3px; border-radius: 50%; background: #aeb9be; transition: transform 140ms, background-color 140ms; }
 .setting input:checked + .switch { background: var(--accent); }
 .setting input:checked + .switch::after { transform: translateX(16px); background: var(--accent-ink); }

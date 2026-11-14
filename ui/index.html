@@ -140,6 +140,8 @@
         <p class="control-help">Personalizza l’indicatore delle cuffie vicino all’orologio.</p>
       </div>
       <label class="setting"><span><strong>Mostra la percentuale</strong><small>Visualizza la carica in cifre direttamente sulla barra. Passa il puntatore sull’icona per leggere la percentuale completa.</small></span><input id="batteryPercent" type="checkbox" role="switch"><span class="switch" aria-hidden="true"></span></label>
+      <label class="setting"><span><strong>Sfondo della percentuale</strong><small>Con sfondo, cifre bianche e colore legato alla carica. Senza sfondo, il colore si applica alle cifre.</small></span><input id="batteryBackground" type="checkbox" role="switch"><span class="switch" aria-hidden="true"></span></label>
+      <label class="tray-threshold" for="batteryFontSize"><span>Dimensione cifre</span><span><input id="batteryFontSize" type="number" min="8" max="16" value="12" required> px</span></label>
       <div class="tray-colors" role="group" aria-label="Colori della batteria">
         <label><input id="batteryLow" type="color" value="#ff8f91"><span>Bassa<small id="battery-low-range">0–25%</small></span></label>
         <label><input id="batteryMedium" type="color" value="#ffc36d"><span>Media<small id="battery-medium-range">26–50%</small></span></label>
@@ -164,7 +166,7 @@
   </section>
 
   <footer>
-    <span class="version">NovaMix <span>0.20.9 · Due flussi</span><span id="preview-label" hidden> · Anteprima</span></span>
+    <span class="version">NovaMix <span>0.20.10 · Due flussi</span><span id="preview-label" hidden> · Anteprima</span></span>
     <button id="hide" class="background-button" title="Chiude la finestra; il mixer resta vicino all’orologio">Continua in background<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
   </footer>
 </main>

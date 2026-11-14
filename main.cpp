@@ -409,6 +409,8 @@ int testCore(){
  {
   trayStatus::BatterySettings settings;
   settings.showPercent = true;
+  settings.background = false;
+  settings.fontSize = 8;
   expect(settings.style(25) == (uint32_t(settings.low) | trayStatus::percentageStyle));
   expect(settings.style(26) == (uint32_t(settings.medium) | trayStatus::percentageStyle));
   expect(settings.style(51) == (uint32_t(settings.normal) | trayStatus::percentageStyle));
@@ -416,6 +418,10 @@ int testCore(){
   settings.mediumLimit = 65;
   expect(settings.style(18) != settings.style(19) && settings.style(19) == settings.style(65) &&
          settings.style(65) != settings.style(66));
+  settings.background = true;
+  settings.fontSize = 12;
+  expect((settings.style(25) & trayStatus::backgroundStyle) != 0);
+  expect(int(settings.style(25) >> trayStatus::fontSizeShift) + 8 == 12);
   for (int size : {16, 20, 24, 32}) {
    for (int value : {-1, 0, 8, 25, 99, 100}) {
     HICON icon = trayStatus::createIcon(false, value, size, settings.style(value));

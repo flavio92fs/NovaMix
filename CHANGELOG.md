@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.10
+
+- Uses smaller regular Segoe UI digits with an adjustable size from 8 to 16 pixels.
+- Adds a battery number background toggle. With a background, the three battery colors apply to the tile and the number is white. Without a background, the colors apply to the number.
+- Shows Update in the installer when NovaMix is already installed.
+
 ## 0.20.9
 
 - Adds a rounded dark background behind the tray battery number, matching the microphone icon.

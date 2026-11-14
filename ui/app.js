@@ -54,6 +54,9 @@ const english = {
  "Mostra la percentuale": "Show battery level as digits",
  "Visualizza la carica in cifre direttamente sulla barra. Passa il puntatore sull’icona per leggere la percentuale completa.": "See the charge as digits in the tray. Hover over the icon to see the full percentage.",
  "Colori della batteria": "Battery colors",
+ "Sfondo della percentuale": "Battery number background",
+ "Con sfondo, cifre bianche e colore legato alla carica. Senza sfondo, il colore si applica alle cifre.": "With a background, digits are white and the background follows the battery level. Without a background, the digits use the battery color.",
+ "Dimensione cifre": "Number size",
  "Bassa": "Low",
  "Media": "Medium",
  "Normale": "Normal",
@@ -80,7 +83,7 @@ const english = {
  "Chiudi NovaMix": "Quit NovaMix",
  "Termina la riproduzione dei due flussi.": "Stop playback of both streams.",
  "Esci": "Quit",
- "0.20.9 · Due flussi": "0.20.9 · Dual stream",
+ "0.20.10 · Due flussi": "0.20.10 · Dual stream",
  "· Anteprima": "· Preview",
  "Chiude la finestra; il mixer resta vicino all’orologio": "Close the window and keep the mixer running in the system tray",
  "Continua in background": "Keep running in background",
@@ -223,14 +226,18 @@ function render(s){
  state=s;disconnected=false;
  applyLanguage(s.language);
  renderRoutes(s);
- for (const id of ['batteryPercent', 'batteryNotify'])
+ for (const id of ['batteryPercent', 'batteryNotify', 'batteryBackground'])
   if (!pending(id)) $(id).checked=Boolean(s[id]);
+ $('batteryBackground').disabled=!s.batteryPercent;
+ $('batteryFontSize').disabled=!s.batteryPercent;
  for (const id of batteryColors) {
   if (!pending(id) && document.activeElement!==$(id) && Number.isInteger(s[id]))
    $(id).value='#'+s[id].toString(16).padStart(6,'0');
  }
  if (!pending('batteryThreshold') && document.activeElement!==$('batteryThreshold'))
   $('batteryThreshold').value=s.batteryThreshold ?? 25;
+ if (!pending('batteryFontSize') && document.activeElement!==$('batteryFontSize'))
+  $('batteryFontSize').value=s.batteryFontSize ?? 12;
  const low=s.batteryLowLimit ?? 25, medium=s.batteryMediumLimit ?? 50;
  if (!batteryBandsDraft && !pending('batteryBands')) {
   if (document.activeElement!==$('batteryLowLimit')) $('batteryLowLimit').value=low;
@@ -296,14 +303,15 @@ for(const id of ['balance','master','physical']){
  $(id).onchange=()=>{flushSlider(id);editing='';lastEdit=Date.now();};$(id).onpointercancel=()=>{flushSlider(id);editing='';};
 }
 for(const id of ['overlay','keyboard','oled','oledMix','gentleMix'])$(id).onchange=async()=>{const checked=$(id).checked;$(id).disabled=true;await action(id,checked?1:0);$(id).disabled=id==='oled'&&state.mic<0;await update();};
-for (const id of ['batteryPercent', 'batteryNotify'])
+for (const id of ['batteryPercent', 'batteryNotify', 'batteryBackground'])
  $(id).onchange=()=>queueSlider(id,$(id).checked?1:0);
 for (const id of batteryColors)
  $(id).oninput=()=>queueSlider(id,parseInt($(id).value.slice(1),16));
-$('batteryThreshold').onchange=()=>{
- const input=$('batteryThreshold');
- if (input.reportValidity()) queueSlider(input.id,input.valueAsNumber);
-};
+for (const id of ['batteryThreshold', 'batteryFontSize'])
+ $(id).onchange=()=>{
+  const input=$(id);
+  if (input.reportValidity()) queueSlider(id,input.valueAsNumber);
+ };
 for (const id of ['batteryLowLimit', 'batteryMediumLimit']) {
  $(id).oninput=()=>{batteryBandsDraft=true;};
  $(id).onchange=()=>{

@@ -8,11 +8,15 @@ constexpr int glyphSize = 16;
 constexpr uint32_t outline = 0xff222936, white = 0xfff6f8fc;
 constexpr uint32_t mint = 0xff79e4b9, muted = 0xffff8f91, gray = 0xffbdc7d6;
 constexpr uint32_t rgbMask = 0xffffff, percentageStyle = 0x1000000;
+constexpr uint32_t backgroundStyle = 0x2000000;
+constexpr int fontSizeShift = 26;
 constexpr int defaultThreshold = 25;
 
 
 struct BatterySettings {
     bool showPercent = false;
+    bool background = true;
+    int fontSize = 12;
     bool notify = false;
     int threshold = defaultThreshold;
     int lowLimit = 25, mediumLimit = 50;
@@ -25,7 +29,9 @@ struct BatterySettings {
     uint32_t style(int percent) const {
         if (percent < 0) return gray & rgbMask;
         int color = percent <= lowLimit ? low : percent <= mediumLimit ? medium : normal;
-        return uint32_t(color) | (showPercent ? percentageStyle : 0);
+        const uint32_t numberStyle = percentageStyle | (background ? backgroundStyle : 0) |
+                                     (uint32_t(fontSize - 8) << fontSizeShift);
+        return uint32_t(color) | (showPercent ? numberStyle : 0);
     }
 };
 
@@ -62,7 +68,7 @@ inline void microphone(Gdiplus::Graphics& g, int state) {
     }
 }
 
-inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int size) {
+inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int size, int fontSize) {
     Gdiplus::Bitmap text(size, size, PixelFormat32bppARGB);
     {
         Gdiplus::Graphics graphics(&text);
@@ -93,9 +99,9 @@ inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int
     auto* coverage = static_cast<uint32_t*>(data);
     RECT ink{};
     bool drawn = false;
-    for (int height = size * 3 / 2; height >= size / 2; --height) {
+    for (int height = MulDiv(fontSize, size, glyphSize); height >= size / 2; --height) {
         const int fontWidth = label.size() == 3 ? std::max(1, height / 3) : 0;
-        HFONT font = CreateFontW(-height, fontWidth, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
+        HFONT font = CreateFontW(-height, fontWidth, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                                 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                                 ANTIALIASED_QUALITY, DEFAULT_PITCH, L"Segoe UI");
         if (!font) break;
@@ -175,10 +181,14 @@ inline HICON createIcon(bool mic, int value, int size, uint32_t style = 0) {
         graphics.ScaleTransform(scale, scale);
         if (mic) microphone(graphics, value);
         else if (value < 0 || !(style & percentageStyle)) battery(graphics, value, style);
-        else tile(graphics, 0.5f, 0.5f, 15, 15, 4, outline);
+        else if (style & backgroundStyle) tile(graphics, 0.5f, 0.5f, 15, 15, 4,
+                                              0xff000000 | (style & rgbMask));
     }
-    if (!mic && value >= 0 && (style & percentageStyle) &&
-        !percentage(bitmap, std::min(value, 100), style & rgbMask, size)) return nullptr;
+    if (!mic && value >= 0 && (style & percentageStyle)) {
+        const uint32_t color = (style & backgroundStyle) ? 0xffffff : style & rgbMask;
+        const int fontSize = int(style >> fontSizeShift) + 8;
+        if (!percentage(bitmap, std::min(value, 100), color, size, fontSize)) return nullptr;
+    }
     HICON icon = nullptr;
     return bitmap.GetHICON(&icon) == Gdiplus::Ok ? icon : nullptr;
 }

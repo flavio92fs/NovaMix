@@ -34,6 +34,7 @@ internal static class Program
     internal const string AppName = "NovaMix 0.20";
     internal static readonly string InstallFolder = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "NovaMix", "0.20");
+    internal static bool IsInstalled { get { return File.Exists(Path.Combine(InstallFolder, "NovaMix.exe")); } }
 
     [STAThread]
     private static int Main(string[] args)
@@ -294,9 +295,11 @@ internal sealed class SetupWindow : WizardWindow
     private readonly Button guide;
     private bool busy;
 
-    internal SetupWindow() : base(Ui.Text("Installazione NovaMix", "NovaMix Setup"), 335)
+    internal SetupWindow() : base(Program.IsInstalled
+        ? Ui.Text("Aggiornamento NovaMix", "NovaMix Update") : Ui.Text("Installazione NovaMix", "NovaMix Setup"), 335)
     {
-        AddText(Ui.Text("Installa NovaMix", "Install NovaMix"), true);
+        bool updating = Program.IsInstalled;
+        AddText(updating ? Ui.Text("Aggiorna NovaMix", "Update NovaMix") : Ui.Text("Installa NovaMix", "Install NovaMix"), true);
         AddText(Ui.Text("NovaMix 0.20 verrà installato per il tuo utente. Il menu Start includerà NovaMix e Configura audio NovaMix.", "NovaMix will be installed for your Windows account. NovaMix and NovaMix Audio Setup will appear in the Start menu."));
         bool installed = Program.HasCableDriver();
         cable = new CheckBox
@@ -312,7 +315,7 @@ internal sealed class SetupWindow : WizardWindow
         };
         origin.LinkClicked += (sender, args) => Run(() => Program.Open("https://vb-audio.com/Cable/"));
         Content.Controls.Add(origin);
-        install = AddButton(Ui.Text("Installa", "Install"), Install);
+        install = AddButton(updating ? Ui.Text("Aggiorna", "Update") : Ui.Text("Installa", "Install"), Install);
         guide = AddButton(Ui.Text("Configura audio", "Audio Setup"), () => Program.Open(Path.Combine(Program.InstallFolder, "Configura audio NovaMix.exe")));
         guide.Enabled = Directory.Exists(Program.InstallFolder);
         status = AddText("");
