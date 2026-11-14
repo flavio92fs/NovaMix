@@ -115,17 +115,24 @@ inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int
         SelectObject(dc, oldFont);
         DeleteObject(font);
         if (!rendered) break;
-        // Use coverage-weighted positioning for optical centering. Keep the
-        // visible bounds inside the icon, including asymmetric digits such as 1.
+        // Center the visible glyph bounds. A pixel-weighted center shifts pairs
+        // such as 12 because the two digits contain different amounts of ink.
+        BYTE strongest = 0;
+        for (int i = 0; i < canvas * canvas; ++i)
+            strongest = std::max(strongest, BYTE(coverage[i] & 255));
+        if (!strongest) break;
+        const int visibleThreshold = std::max(1, int(strongest) * 3 / 4);
         ink = {canvas, canvas, 0, 0};
-        uint64_t totalCoverage = 0, weightedX = 0, weightedY = 0;
+        RECT extent = ink;
         for (int y = 0; y < canvas; ++y) {
             for (int x = 0; x < canvas; ++x) {
                 const auto alpha = coverage[y * canvas + x] & 255;
-                totalCoverage += alpha;
-                weightedX += uint64_t(2 * x + 1) * alpha;
-                weightedY += uint64_t(2 * y + 1) * alpha;
                 if (!alpha) continue;
+                extent.left = std::min(extent.left, LONG(x));
+                extent.top = std::min(extent.top, LONG(y));
+                extent.right = std::max(extent.right, LONG(x + 1));
+                extent.bottom = std::max(extent.bottom, LONG(y + 1));
+                if (alpha < uint32_t(visibleThreshold)) continue;
                 ink.left = std::min(ink.left, LONG(x));
                 ink.top = std::min(ink.top, LONG(y));
                 ink.right = std::max(ink.right, LONG(x + 1));
@@ -134,11 +141,11 @@ inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int
         }
         const int width = ink.right - ink.left, inkHeight = ink.bottom - ink.top;
         if (width <= 0 || inkHeight <= 0 || width > size || inkHeight > size - 2) continue;
-        const double centerX = double(weightedX) / (2 * totalCoverage);
-        const double centerY = double(weightedY) / (2 * totalCoverage);
-        const int left = int(std::lround(size / 2.0 - centerX)) + int(ink.left);
-        const int top = int(std::lround(size / 2.0 - centerY)) + int(ink.top);
-        if (left < 0 || left + width > size || top < 0 || top + inkHeight > size) continue;
+        const int left = int(std::lround((size - width) / 2.0));
+        const int top = int(std::lround((size - inkHeight) / 2.0));
+        const int offsetX = left - ink.left, offsetY = top - ink.top;
+        if (extent.left + offsetX < 0 || extent.right + offsetX > size ||
+            extent.top + offsetY < 0 || extent.bottom + offsetY > size) continue;
         // Grayscale coverage keeps the small glyph edges smooth without
         // ClearType's colored fringes. Composite the text over the tray tile.
         for (int y = 0; y < canvas; ++y) {
@@ -200,7 +207,7 @@ inline HICON createIcon(bool mic, int value, int size, uint64_t style = 0) {
         else if (style & backgroundStyle) {
             const float side = float((style >> backgroundSizeShift) & 15) + 8;
             const float inset = (glyphSize - side) / 2;
-            graphics.SetPixelOffsetMode(Gdiplus::PixelOffsetModeNone);
+            graphics.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHalf);
             tile(graphics, inset, inset, side, side, 1, 0xff000000 | uint32_t(style & rgbMask));
         }
     }

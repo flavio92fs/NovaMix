@@ -427,14 +427,42 @@ int testCore(){
   settings.backgroundSize = 12;
   expect(settings.style(25) != largeBackground);
   expect(int((settings.style(25) >> trayStatus::fontSizeShift) & 15) + 8 == 12);
+  settings.backgroundSize = 16;
+  settings.low = settings.medium = settings.normal = 0xe6005d;
   for (int size : {16, 20, 24, 32}) {
-   for (int value : {-1, 0, 8, 25, 99, 100}) {
+   for (int value : {-1, 0, 8, 12, 25, 99, 100}) {
     HICON icon = trayStatus::createIcon(false, value, size, settings.style(value));
     ICONINFO info{};
     const bool valid = icon && GetIconInfo(icon, &info);
     BITMAP image{};
     expect(valid && GetObjectW(info.hbmColor, sizeof(image), &image) &&
            image.bmWidth == size && image.bmHeight == size && image.bmBitsPixel == 32);
+    if (valid && value == 12) {
+     BITMAPINFO format{};
+     format.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+     format.bmiHeader.biWidth = size;
+     format.bmiHeader.biHeight = -size;
+     format.bmiHeader.biPlanes = 1;
+     format.bmiHeader.biBitCount = 32;
+     std::vector<uint32_t> iconPixels(size * size);
+     HDC dc = CreateCompatibleDC(nullptr);
+     const int rows = GetDIBits(dc, info.hbmColor, 0, size, iconPixels.data(), &format, DIB_RGB_COLORS);
+     DeleteDC(dc);
+     RECT digits{size, size, 0, 0};
+     bool visible = false;
+     for (int y = 0; y < size; ++y) for (int x = 0; x < size; ++x) {
+      // The pink background has no green component, so green measures the white glyph.
+      if (((iconPixels[y * size + x] >> 8) & 255) < 192) continue;
+      visible = true;
+      digits.left = std::min(digits.left, LONG(x));
+      digits.top = std::min(digits.top, LONG(y));
+      digits.right = std::max(digits.right, LONG(x + 1));
+      digits.bottom = std::max(digits.bottom, LONG(y + 1));
+     }
+     expect(rows == size && visible && std::abs(digits.left - (size - digits.right)) <= 1 &&
+            std::abs(digits.top - (size - digits.bottom)) <= 1);
+     expect(iconPixels[(size / 2) * size] == 0xffe6005d && iconPixels[size / 2] == 0xffe6005d);
+    }
     if (valid) { DeleteObject(info.hbmColor); DeleteObject(info.hbmMask); }
     if (icon) DestroyIcon(icon);
    }

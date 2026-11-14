@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.12
+
+- Centers tray numbers by their visible margins, including asymmetric pairs such as 12.
+- Aligns the background to the pixel grid so it has equal margins around the icon.
+- Adds a rendering regression check for the reported white-on-pink 12 example.
+
 ## 0.20.11
 
 - Separates the Language and Accent color cards with consistent spacing.
