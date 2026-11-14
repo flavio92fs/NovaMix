@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.8
+
+- Renders battery numbers with Windows-hinted Segoe UI Semibold at the actual pixel size of the tray icon.
+- Uses grayscale antialiasing and a transparent background. Three-digit values use a condensed native font so 100 remains readable.
+
 ## 0.20.7
 
 - Redraws the tray microphone and battery at the taskbar’s current DPI. Battery number mode uses the full icon space for the digits and shows the complete percentage on hover.

@@ -62,33 +62,79 @@ inline void microphone(Gdiplus::Graphics& g, int state) {
     }
 }
 
-inline void percentage(Gdiplus::Graphics& g, int percent, uint32_t color) {
-    const auto brightness = 299 * ((color >> 16) & 255) + 587 * ((color >> 8) & 255) + 114 * (color & 255);
-    tile(g, 0.15f, 1, 15.7f, 14, 2.7f, brightness < 130000 ? white : outline);
-    // Use all available space for the digits. The tooltip includes the percent sign.
+inline bool percentage(Gdiplus::Bitmap& bitmap, int percent, uint32_t color, int size) {
+    // GDI hints the font at its final pixel size. Scaling glyph outlines afterwards
+    // loses those adjustments and makes small tray numbers uneven or blurry.
+    const int canvas = size * 3;
+    BITMAPINFO info{};
+    info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    info.bmiHeader.biWidth = canvas;
+    info.bmiHeader.biHeight = -canvas;
+    info.bmiHeader.biPlanes = 1;
+    info.bmiHeader.biBitCount = 32;
+    void* data = nullptr;
+    HBITMAP mask = CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &data, nullptr, 0);
+    HDC dc = CreateCompatibleDC(nullptr);
+    if (!mask || !dc) {
+        if (mask) DeleteObject(mask);
+        if (dc) DeleteDC(dc);
+        return false;
+    }
+    const auto oldBitmap = SelectObject(dc, mask);
+    SetTextColor(dc, RGB(255, 255, 255));
+    SetBkColor(dc, RGB(0, 0, 0));
+    SetBkMode(dc, OPAQUE);
     const auto label = std::to_wstring(percent);
-    Gdiplus::FontFamily family(L"Segoe UI");
-    Gdiplus::GraphicsPath glyphs;
-    glyphs.AddString(label.c_str(), -1, &family, Gdiplus::FontStyleBold, 16, Gdiplus::PointF(0, 0), nullptr);
-    Gdiplus::RectF bounds;
-    glyphs.GetBounds(&bounds);
-    if (bounds.Width <= 0 || bounds.Height <= 0) return;
-    const float sx = std::min(13.5f / bounds.Width, 10.5f / bounds.Height);
-    const float sy = 10.5f / bounds.Height;
-    Gdiplus::Matrix fit(sx, 0, 0, sy, 8 - (bounds.X + bounds.Width / 2) * sx,
-                        8 - (bounds.Y + bounds.Height / 2) * sy);
-    glyphs.Transform(&fit);
-    Gdiplus::SolidBrush ink{Gdiplus::Color(color)};
-    g.FillPath(&ink, &glyphs);
+    auto* coverage = static_cast<uint32_t*>(data);
+    RECT ink{};
+    bool drawn = false;
+    for (int height = size * 3 / 2; height >= size / 2; --height) {
+        const int fontWidth = label.size() == 3 ? std::max(1, height / 3) : 0;
+        HFONT font = CreateFontW(-height, fontWidth, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
+                                DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                ANTIALIASED_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+        if (!font) break;
+        const auto oldFont = SelectObject(dc, font);
+        std::fill_n(coverage, canvas * canvas, 0u);
+        const BOOL rendered = TextOutW(dc, 0, 0, label.c_str(), int(label.size()));
+        GdiFlush();
+        SelectObject(dc, oldFont);
+        DeleteObject(font);
+        if (!rendered) break;
+        ink = {canvas, canvas, 0, 0};
+        for (int y = 0; y < canvas; ++y) {
+            for (int x = 0; x < canvas; ++x) {
+                if (!(coverage[y * canvas + x] & 255)) continue;
+                ink.left = std::min(ink.left, LONG(x));
+                ink.top = std::min(ink.top, LONG(y));
+                ink.right = std::max(ink.right, LONG(x + 1));
+                ink.bottom = std::max(ink.bottom, LONG(y + 1));
+            }
+        }
+        const int width = ink.right - ink.left, inkHeight = ink.bottom - ink.top;
+        if (width <= 0 || inkHeight <= 0 || width > size || inkHeight > size - 2) continue;
+        const int left = (size - width) / 2, top = (size - inkHeight) / 2;
+        // Grayscale coverage gives smooth transparent edges without ClearType's
+        // colored fringes. The shell composites these pixels onto either theme.
+        for (int y = 0; y < inkHeight; ++y) {
+            for (int x = 0; x < width; ++x) {
+                const BYTE alpha = BYTE(coverage[(ink.top + y) * canvas + ink.left + x] & 255);
+                bitmap.SetPixel(left + x, top + y, Gdiplus::Color(alpha, (color >> 16) & 255,
+                                                               (color >> 8) & 255, color & 255));
+            }
+        }
+        drawn = true;
+        break;
+    }
+    SelectObject(dc, oldBitmap);
+    DeleteDC(dc);
+    DeleteObject(mask);
+    return drawn;
 }
 
 inline void battery(Gdiplus::Graphics& g, int percent, uint32_t style) {
     percent = std::min(percent, 100);
     const uint32_t color = 0xff000000 | (style & rgbMask);
-    if (percent >= 0 && (style & percentageStyle)) {
-        percentage(g, percent, color);
-        return;
-    }
     tile(g, 0.3f, 3, 13.8f, 10, 2.4f, outline);
     tile(g, 13, 5.5f, 2.7f, 5, 1.2f, outline);
     tile(g, 13.4f, 6.5f, 1.3f, 3, 0.5f, white);
@@ -119,8 +165,10 @@ inline HICON createIcon(bool mic, int value, int size, uint32_t style = 0) {
         const float scale = float(size) / glyphSize;
         graphics.ScaleTransform(scale, scale);
         if (mic) microphone(graphics, value);
-        else battery(graphics, value, style);
+        else if (value < 0 || !(style & percentageStyle)) battery(graphics, value, style);
     }
+    if (!mic && value >= 0 && (style & percentageStyle) &&
+        !percentage(bitmap, std::min(value, 100), style & rgbMask, size)) return nullptr;
     HICON icon = nullptr;
     return bitmap.GetHICON(&icon) == Gdiplus::Ok ? icon : nullptr;
 }
