@@ -31,6 +31,15 @@ foreach ($package in ($metadata.packages | Sort-Object name,version)) {
     if (!$texts.Count -and $package.name -eq 'clipboard-win' -and $package.license -eq 'BSL-1.0') {
         $texts = @(Get-Item -LiteralPath (Join-Path $PSScriptRoot 'licenses\BSL-1.0.txt'))
     }
+    if (!$texts.Count -and $package.name -eq 'hexf-parse' -and $package.license -eq 'CC0-1.0') {
+        $texts = @(Get-Item -LiteralPath (Join-Path $PSScriptRoot 'licenses\CC0-1.0.txt'))
+    }
+    if (!$texts.Count -and $package.name -eq 'profiling' -and $package.license -eq 'MIT OR Apache-2.0') {
+        $texts = @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'licenses') -Filter 'profiling-LICENSE*' -File)
+    }
+    if (!$texts.Count -and $package.name -eq 'svg_fmt' -and $package.license -eq 'MIT/Apache-2.0') {
+        $texts = @(Get-Item -LiteralPath (Join-Path $PSScriptRoot 'licenses\svg_fmt-LICENSE'))
+    }
     if (!$texts.Count) { throw ('Missing upstream license text: ' + $key) }
     $filename = $package.name + '-' + $package.version + '.txt'
     $content = @($key, ('SPDX: ' + $package.license), ('Source: ' + $package.repository), '')

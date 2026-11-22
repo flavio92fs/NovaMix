@@ -1,6 +1,6 @@
 [package]
 name = "novamix-native-ui"
-version = "0.21.0-alpha.1"
+version = "0.21.0-alpha.2"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
@@ -12,15 +12,20 @@ name = "NovaMixUi"
 path = "src/main.rs"
 
 [dependencies]
-iced = { version = "=0.14.0", default-features = false, features = ["tiny-skia", "tokio", "crisp"] }
+iced = { version = "=0.14.0", default-features = false, features = ["tiny-skia", "tokio", "advanced"] }
+wgpu = { version = "27", optional = true, default-features = false, features = ["std", "wgsl", "dx12"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 png = "0.18"
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging", "Win32_UI_Controls_Dialogs", "Win32_Graphics_Gdi"] }
 
 [profile.release]
-opt-level = "s"
+opt-level = 3
 lto = "thin"
 codegen-units = 1
 strip = "debuginfo"
 panic = "abort"
+
+[features]
+default = ["gpu"]
+gpu = ["iced/wgpu-bare", "dep:wgpu"]

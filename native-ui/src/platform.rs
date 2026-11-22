@@ -10,9 +10,39 @@ use windows_sys::Win32::{
             CommDlgExtendedError, GetSaveFileNameW, OFN_NOCHANGEDIR, OFN_OVERWRITEPROMPT,
             OFN_PATHMUSTEXIST, OPENFILENAMEW,
         },
-        WindowsAndMessaging::{MB_ICONERROR, MB_OK, MessageBoxW},
+        WindowsAndMessaging::{
+            GWL_STYLE, GetWindowLongPtrW, MB_ICONERROR, MB_OK, MessageBoxW, SWP_FRAMECHANGED,
+            SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SetWindowLongPtrW, SetWindowPos,
+            WS_MAXIMIZEBOX,
+        },
     },
 };
+
+/// Keep native resizing/minimize/close while disabling title-bar maximization.
+pub fn configure_window(window: &dyn iced::window::Window) -> bool {
+    use iced::window::raw_window_handle::RawWindowHandle;
+    let Ok(handle) = window.window_handle() else {
+        return false;
+    };
+    let RawWindowHandle::Win32(raw) = handle.as_raw() else {
+        return false;
+    };
+    let hwnd = raw.hwnd.get() as _;
+    unsafe {
+        let style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+        SetWindowLongPtrW(hwnd, GWL_STYLE, style & !(WS_MAXIMIZEBOX as isize));
+        SetWindowPos(
+            hwnd,
+            std::ptr::null_mut(),
+            0,
+            0,
+            0,
+            0,
+            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+        );
+        GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_MAXIMIZEBOX as isize == 0
+    }
+}
 
 fn wide(text: &str) -> Vec<u16> {
     std::ffi::OsStr::new(text)

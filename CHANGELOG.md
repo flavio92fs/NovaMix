@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.21.0-alpha.2 — scrolling and window layout
+
+- Uses Direct3D 12 accelerated Iced rendering, retaining a software fallback.
+- Optimizes the Rust release build for execution speed and removes scroll-time pixel snapping.
+- Animates wheel scrolling inside the widget without an idle timer or per-frame application view rebuild; touchpad pixels and scrollbar dragging stay direct.
+- Disables title-bar maximization while preserving resizing, minimize and close.
+- Centers the page in wide windows and resets scrolling when switching tabs.
+- Adds UI update timing checks using synthetic Settings data and regression checks for smooth scrolling bounds, reversal and settling.
+
 ## 0.21.0-alpha.1 — native UI preview
 
 - Replaces the Electron panel with a native Rust/Iced interface using Tiny Skia.

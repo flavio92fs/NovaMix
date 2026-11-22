@@ -2,13 +2,13 @@
 
 NovaMix is an open-source ChatMix controller for the **SteelSeries Arctis Nova Pro Wireless**. Balance PC audio and chat apps from the headset wheel or the desktop mixer. NovaMix mixes two audio streams and leaves each app’s own Windows volume where you set it.
 
-**Native UI preview — 0.21.0-alpha.1:** This branch replaces the Electron panel with a Rust/Iced interface. The native installer contains no Electron, Chromium, Node.js or WebView2 runtime. The tested C++ audio/HID engine is retained for this first migration stage. See [native UI notes](docs/NATIVE-UI.md) for scope, builds and verification.
+**Native UI preview — 0.21.0-alpha.2:** This branch replaces the Electron panel with a Rust/Iced interface. The native installer contains no Electron, Chromium, Node.js or WebView2 runtime. The tested C++ audio/HID engine is retained for this first migration stage. See [native UI notes](docs/NATIVE-UI.md) for scope, builds and verification.
 
 ![NovaMix mixer in English, shown with demo data](docs/mixer.png)
 
 ## Download
 
-Download the **[native Iced preview installer for Windows x64](https://github.com/flavio92fs/NovaMix/releases/download/v0.21.0-alpha.1/NovaMix-Setup-x64.exe)** and its [SHA-256 checksum](https://github.com/flavio92fs/NovaMix/releases/download/v0.21.0-alpha.1/NovaMix-Setup-x64.exe.sha256). The [stable release](https://github.com/flavio92fs/NovaMix/releases/latest) remains available separately.
+Download the **[native Iced preview installer for Windows x64](https://github.com/flavio92fs/NovaMix/releases/download/v0.21.0-alpha.2/NovaMix-Setup-x64.exe)** and its [SHA-256 checksum](https://github.com/flavio92fs/NovaMix/releases/download/v0.21.0-alpha.2/NovaMix-Setup-x64.exe.sha256). The [stable release](https://github.com/flavio92fs/NovaMix/releases/latest) remains available separately.
 
 **Requirements:** Windows 11 x64, an Arctis Nova Pro Wireless base connected by USB for hardware controls, and two distinct Windows playback endpoints to use as input streams. The included wizard is designed for one standard VB-CABLE endpoint and an unused digital output, such as S/PDIF. If your PC has no usable spare digital output, supply another distinct virtual playback endpoint and choose it in **Streams**. The final playback output must be a third endpoint.
 
@@ -58,6 +58,6 @@ Install **Rust stable** (MSVC toolchain, Rust 1.88 or newer), **Visual Studio Bu
 
 The script builds the C++ engine and Rust/Iced panel, packages the locked dependency licenses, verifies the original VB-CABLE archive and produces the installer and checksum in `dist\`. For an offline build, prefetch the locked Cargo dependencies and pass the original vendor ZIP with `-CableArchive`. See [native UI build instructions](docs/NATIVE-UI.md). The optional legacy shell can still be built with `-Frontend Electron -ElectronArchive <zip>`; it is not included in the native installer.
 
-The audio engine uses native WASAPI loopback and Windows USB HID. Rust/Iced provides the desktop panel, using the Tiny Skia software renderer. Closing the panel releases the UI process; the audio engine and tray continue running. The project source is [MIT-licensed](LICENSE). See [third-party notices](THIRD-PARTY.md), the [changelog](CHANGELOG.md), and the [release checklist](RELEASING.md).
+The audio engine uses native WASAPI loopback and Windows USB HID. Rust/Iced provides the desktop panel with Direct3D 12 acceleration and a Tiny Skia software fallback. Wheel scrolling is animated only while moving, and the content stays centered when resizing. Title-bar maximization is disabled. Closing the panel releases the UI process; the audio engine and tray continue running. The project source is [MIT-licensed](LICENSE). See [third-party notices](THIRD-PARTY.md), the [changelog](CHANGELOG.md), and the [release checklist](RELEASING.md).
 
 NovaMix is an independent project. SteelSeries and Arctis are trademarks of their respective owners.

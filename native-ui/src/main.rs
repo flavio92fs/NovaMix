@@ -2,6 +2,8 @@
 mod app;
 mod platform;
 mod protocol;
+mod scroll_bench;
+mod smooth_scroll;
 mod worker;
 
 fn main() {

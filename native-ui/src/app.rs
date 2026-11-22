@@ -27,6 +27,7 @@ pub struct Launch {
     pub verify: bool,
     pub result: Option<PathBuf>,
     capture: Option<PathBuf>,
+    benchmark: Option<PathBuf>,
     width: u32,
 }
 impl Launch {
@@ -57,6 +58,11 @@ impl Launch {
                 "--result" if launch.result.is_none() => {
                     launch.result = Some(PathBuf::from(iter.next().ok_or("Missing result path.")?))
                 }
+                "--scroll-benchmark" if launch.benchmark.is_none() => {
+                    launch.benchmark = Some(PathBuf::from(
+                        iter.next().ok_or("Missing benchmark output path.")?,
+                    ));
+                }
                 "--width" => {
                     launch.width = iter
                         .next()
@@ -75,7 +81,7 @@ impl Launch {
                 return Err("Demo cannot connect to an engine.".into());
             }
         } else {
-            if launch.capture.is_some() {
+            if launch.capture.is_some() || launch.benchmark.is_some() {
                 return Err("Screenshots are only available with demo data.".into());
             }
             launch.connection = Some(Connection::parse(
@@ -110,6 +116,9 @@ impl std::fmt::Display for Language {
 #[derive(Debug, Clone)]
 enum Message {
     Tick,
+    WindowOpened(window::Id),
+    WindowConfigured(bool),
+    BenchmarkTick(Instant),
     Tab(Tab),
     Action(&'static str, i32),
     Language(Language),
@@ -124,6 +133,7 @@ enum Message {
 }
 
 struct App {
+    benchmark: Option<crate::scroll_bench::Benchmark>,
     state: State,
     worker: Option<Worker>,
     demo: bool,
@@ -175,7 +185,11 @@ pub fn run(launch: Launch) -> iced::Result {
 
 impl App {
     fn subscription(&self) -> iced::Subscription<Message> {
-        let mut subscriptions = Vec::new();
+        let mut subscriptions = vec![window::open_events().map(Message::WindowOpened)];
+        if self.benchmark.is_some() {
+            subscriptions
+                .push(iced::time::every(Duration::from_millis(16)).map(Message::BenchmarkTick));
+        }
         if let Some(worker) = &self.worker {
             subscriptions.push(worker.subscription().map(|()| Message::Tick));
         }
@@ -203,7 +217,12 @@ impl App {
             worker,
             demo: launch.demo,
             connected: launch.demo,
-            tab: Tab::Mixer,
+            tab: if launch.benchmark.is_some() {
+                Tab::Settings
+            } else {
+                Tab::Mixer
+            },
+            benchmark: launch.benchmark.map(crate::scroll_bench::Benchmark::new),
             revision: 0,
             error: None,
             toast: None,
@@ -241,6 +260,40 @@ impl App {
     }
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            Message::WindowOpened(id) => {
+                if let Some(bench) = &mut self.benchmark {
+                    bench.start = Some(Instant::now());
+                }
+                return window::run(id, crate::platform::configure_window)
+                    .map(Message::WindowConfigured);
+            }
+            Message::WindowConfigured(configured) => {
+                if let Some(bench) = &mut self.benchmark {
+                    bench.configured = configured;
+                }
+            }
+            Message::BenchmarkTick(scheduled) => {
+                if let Some(bench) = &mut self.benchmark {
+                    bench.frame(Instant::now(), scheduled);
+                    if let Some(start) = bench.start {
+                        let elapsed = start.elapsed();
+                        if elapsed >= Duration::from_secs(4) {
+                            let _ = bench.finish();
+                            return iced::exit();
+                        }
+                        let phase = elapsed.as_secs_f32() % 1.6 / 1.6;
+                        let y = if phase < 0.5 {
+                            phase * 1800.0
+                        } else {
+                            (1.0 - phase) * 1800.0
+                        };
+                        return operation::scroll_to(
+                            "page",
+                            scrollable::AbsoluteOffset { x: 0.0, y },
+                        );
+                    }
+                }
+            }
             Message::Tick => {
                 if let Some(worker) = &self.worker {
                     for event in worker.drain() {
@@ -306,6 +359,7 @@ impl App {
             Message::Tab(tab) => {
                 self.tab = tab;
                 self.error = None;
+                return operation::scroll_to("page", scrollable::AbsoluteOffset { x: 0.0, y: 0.0 });
             }
             Message::Action(name, value) => self.action(name, value),
             Message::Language(value) => {
@@ -570,15 +624,14 @@ impl App {
             content = content.push(text(toast).size(12).color(self.accent()));
         }
         content = content.push(footer);
-        container(
-            scrollable(
-                container(content)
-                    .padding([20, 28])
-                    .max_width(940)
-                    .center_x(Fill),
-            )
-            .id("page"),
-        )
+        let page = container(content)
+            .padding([20, 28])
+            .width(Fill)
+            .max_width(940);
+        container(crate::smooth_scroll::page(
+            scrollable(container(page).center_x(Fill)).id("page"),
+            self.tab as u8,
+        ))
         .height(Fill)
         .width(Fill)
         .into()

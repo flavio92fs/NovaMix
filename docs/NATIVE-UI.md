@@ -1,8 +1,10 @@
 # Native Iced interface preview
 
-Version: **0.21.0-alpha.1**, Windows 11 x64.
+Version: **0.21.0-alpha.2**, Windows 11 x64.
 
-This is the first stage of NovaMix's Rust migration: a real native desktop panel connected to the existing C++ engine. It is not a complete Rust rewrite of the audio/HID engine. The native installer does not contain Electron, Chromium, Node.js, a JavaScript frontend or WebView2. Iced renders the interface with Tiny Skia.
+This is the first stage of NovaMix's Rust migration: a real native desktop panel connected to the existing C++ engine. It is not a complete Rust rewrite of the audio/HID engine. The native installer does not contain Electron, Chromium, Node.js, a JavaScript frontend or WebView2. Iced uses wgpu/Direct3D 12 acceleration and falls back to Tiny Skia if GPU initialization is unavailable. Release builds optimize for execution speed.
+
+Wheel notches animate inside the scroll widget without rebuilding the entire application view for every animation frame. Pixel/touchpad scrolling and dragging the scrollbar remain direct. Animation stops when settled and does not use an idle animation timer. Text can move at subpixel positions during scrolling. The native window retains resizing, minimize and close, disables title-bar maximization, and centers the page within wide windows.
 
 ## Included controls
 
@@ -51,7 +53,13 @@ For a panel-only visual demo, run `.\.build\iced-frontend\NovaMixUi.exe --demo`.
 
 The script records UI executable size, working set, private memory and CPU time in `test-iced-resources.json`. These are measurements for the synthetic preview on the test machine, not guaranteed live audio resource usage. Closing the panel releases its memory; the engine remains running.
 
-In the initial Windows preview check, the complete installer was **3,727,872 bytes** (about 3.7 MB), the UI executable was about 3.4 MB, and the panel used approximately **25–28 MiB working set**. These panel memory figures exclude the audio engine. The previous 0.20.12 installer was 164,077,568 bytes.
+In the initial **alpha.1 software-rendered** Windows preview check, the complete installer was 3,727,872 bytes (about 3.7 MB), the UI executable was about 3.4 MB, and the panel used approximately 25–28 MiB working set. These are historical alpha.1 figures; GPU rendering in alpha.2 changes the binary size and memory footprint. The figures exclude the audio engine. The previous 0.20.12 installer was 164,077,568 bytes.
+
+In the **alpha.2 GPU** preview check, the installer was 5,744,128 bytes (about 5.7 MB), and the open panel used approximately 152 MiB working set. The GPU backend increases memory use while the panel is open. Closing the panel releases its process and graphics resources while the mixer continues running.
+
+To compare rendering with synthetic data, run `NovaMixUi.exe --demo --scroll-benchmark <output.json>`. The check scrolls the Settings page on a 16 ms update schedule, records UI update intervals and scheduling delay after warm-up, verifies the maximize style, and exits. These are UI responsiveness measurements, not GPU presentation FPS. Set the process-local environment variable `ICED_BACKEND` to `wgpu` or `tiny-skia` to compare GPU/software rendering. This test does not connect to the engine or access hardware and does not measure audible audio latency.
+
+In one comparison on the test PC, the 95th-percentile UI update delay was approximately 124 ms with software rendering and 2.2 ms with Direct3D 12. The corresponding 95th-percentile update intervals were approximately 64 ms and 17 ms. Results depend on hardware, graphics drivers, display scaling and other activity.
 
 The Rust client uses bounded loopback-only HTTP requests on a worker thread. The panel receives state-change events and has no idle UI polling timer. It does not follow redirects or accept arbitrary remote addresses. Slider targets are coalesced without moving them ahead of start/stop/route commands. Revision checks prevent an older poll response from replacing a newer slider value. Process-local session tokens are excluded from logs and screenshots.
 
