@@ -31,7 +31,7 @@ internal static class Ui
 
 internal static class Program
 {
-    internal const string AppName = "NovaMix 0.20";
+    internal const string AppName = "NovaMix 0.20"; // Keep the existing Start menu identity on update.
     internal static readonly string InstallFolder = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "NovaMix", "0.20");
     internal static bool IsInstalled { get { return File.Exists(Path.Combine(InstallFolder, "NovaMix.exe")); } }
@@ -127,7 +127,8 @@ internal static class Program
                 ReplaceAppFile(archive, folder, "Configura audio NovaMix.exe");
                 ReplaceAppFile(archive, folder, "NovaMix.exe");
                 foreach (var asset in new[] { "ui/index.html", "ui/app.js", "ui/style.css" })
-                    ReplaceAppFile(archive, folder, asset);
+                    if (archive.GetEntry(asset) != null) ReplaceAppFile(archive, folder, asset);
+                if (archive.GetEntry("THIRD-PARTY.md") != null) ReplaceAppFile(archive, folder, "THIRD-PARTY.md");
                 ReplaceFrontend(archive, folder);
             }
             return;
@@ -152,8 +153,13 @@ internal static class Program
         string installedVersion = Path.Combine(installed, "version");
         if (File.Exists(installedVersion) && File.ReadAllText(installedVersion).Trim() == packagedVersion)
         {
-            foreach (var asset in new[] { "main.cjs", "preload.cjs", "package.json" })
-                ReplaceAppFile(archive, folder, prefix + "resources/app/" + asset);
+            if (packagedVersion.StartsWith("iced-", StringComparison.Ordinal))
+            {
+                ReplaceAppFile(archive, folder, prefix + "NovaMixUi.exe");
+                ReplaceAppFile(archive, folder, prefix + "version");
+            }
+            else foreach (var asset in new[] { "main.cjs", "preload.cjs", "package.json" })
+                    ReplaceAppFile(archive, folder, prefix + "resources/app/" + asset);
             return;
         }
 
@@ -168,7 +174,7 @@ internal static class Program
             {
                 string path = Path.GetFullPath(Path.Combine(staging, entry.FullName.Substring(prefix.Length)));
                 if (!path.StartsWith(stagingRoot, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException("Invalid Electron package path.");
+                    throw new InvalidDataException("Invalid frontend package path.");
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 entry.ExtractToFile(path);
             }
@@ -300,7 +306,7 @@ internal sealed class SetupWindow : WizardWindow
     {
         bool updating = Program.IsInstalled;
         AddText(updating ? Ui.Text("Aggiorna NovaMix", "Update NovaMix") : Ui.Text("Installa NovaMix", "Install NovaMix"), true);
-        AddText(Ui.Text("NovaMix 0.20 verrà installato per il tuo utente. Il menu Start includerà NovaMix e Configura audio NovaMix.", "NovaMix will be installed for your Windows account. NovaMix and NovaMix Audio Setup will appear in the Start menu."));
+        AddText(Ui.Text("NovaMix con interfaccia nativa verrà installato per il tuo utente. Mantiene le impostazioni della versione precedente.", "NovaMix with the native interface will be installed for your Windows account. Existing settings are preserved."));
         bool installed = Program.HasCableDriver();
         cable = new CheckBox
         {

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.21.0-alpha.1 — native UI preview
+
+- Replaces the Electron panel with a native Rust/Iced interface using Tiny Skia.
+- Packages no Chromium, Node.js or WebView2 runtime in the native installer.
+- Keeps the C++ audio/HID engine for the first migration stage, including the headset wheel, OLED, overlay and native tray indicators.
+- Recreates the mixer, routes, hardware status and English/Italian settings in native widgets.
+- Uses bounded background IPC, coalesced slider targets and revision checks for responsive controls.
+- Preserves installed routing/preferences, and replaces the Electron frontend when updating.
+- Includes native diagnostic export and original Rust dependency license texts.
+- Adds synthetic preview integration/lifecycle checks and reproducible UI resource measurements.
+
 ## 0.20.12
 
 - Centers tray numbers by their visible margins, including asymmetric pairs such as 12.

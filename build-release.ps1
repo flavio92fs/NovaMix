@@ -1,6 +1,8 @@
 #requires -Version 5.1
 [CmdletBinding()]
 param(
+    [ValidateSet('Iced','Electron')][string]$Frontend = 'Iced',
+    [string]$CargoPath = 'cargo',
     [string]$ElectronArchive,
     [string]$CableArchive,
     [string]$OutputDirectory = (Join-Path $PSScriptRoot 'dist')
@@ -30,7 +32,11 @@ if ((Get-FileHash -LiteralPath $CableArchive).Hash -ne $cableHash) {
 
 & (Join-Path $PSScriptRoot 'build.ps1') -OutputName '.build\NovaMix.exe'
 # Prepare the runtime from a checksum-verified archive on every release build.
-& (Join-Path $PSScriptRoot 'build-ui.ps1') -ArchivePath $ElectronArchive
+if ($Frontend -eq 'Iced') {
+    & (Join-Path $PSScriptRoot 'build-native-ui.ps1') -CargoPath $CargoPath
+} else {
+    & (Join-Path $PSScriptRoot 'build-ui.ps1') -ArchivePath $ElectronArchive
+}
 
 $framework = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319'
 $csc = Join-Path $framework 'csc.exe'
@@ -48,19 +54,23 @@ $target = [IO.Compression.ZipArchive]::new([IO.File]::Create($appZip), [IO.Compr
 try {
     $appFiles = @{
         'LICENSE' = Join-Path $PSScriptRoot 'LICENSE'
+        'THIRD-PARTY.md' = Join-Path $PSScriptRoot 'THIRD-PARTY.md'
         'NovaMix.exe' = Join-Path $build 'NovaMix.exe'
         'Configura audio NovaMix.exe' = $guide
     }
-    foreach ($name in @('ui/index.html','ui/app.js','ui/style.css','assets/NovaMix.ico')) {
+    foreach ($name in @('assets/NovaMix.ico')) {
         $appFiles[$name] = Join-Path $PSScriptRoot $name
     }
-    $frontend = Join-Path $PSScriptRoot 'frontend'
-    foreach ($file in Get-ChildItem -LiteralPath $frontend -File -Recurse) {
-        $name = 'frontend/' + $file.FullName.Substring($frontend.Length + 1).Replace('\', '/')
+    $frontendRoot = if ($Frontend -eq 'Iced') { Join-Path $build 'iced-frontend' } else { Join-Path $PSScriptRoot 'frontend' }
+    foreach ($file in Get-ChildItem -LiteralPath $frontendRoot -File -Recurse) {
+        $name = 'frontend/' + $file.FullName.Substring($frontendRoot.Length + 1).Replace('\', '/')
         $appFiles[$name] = $file.FullName
     }
-    foreach ($shellFile in @('main.cjs','preload.cjs','package.json')) {
-        $appFiles["frontend/resources/app/$shellFile"] = Join-Path $PSScriptRoot "electron-src/$shellFile"
+    if ($Frontend -eq 'Electron') {
+        foreach ($name in @('ui/index.html','ui/app.js','ui/style.css')) { $appFiles[$name] = Join-Path $PSScriptRoot $name }
+        foreach ($shellFile in @('main.cjs','preload.cjs','package.json')) {
+            $appFiles["frontend/resources/app/$shellFile"] = Join-Path $PSScriptRoot "electron-src/$shellFile"
+        }
     }
     foreach ($name in ($appFiles.Keys | Sort-Object)) {
         [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($target, $appFiles[$name], $name) | Out-Null

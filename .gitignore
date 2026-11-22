@@ -1,4 +1,5 @@
 /.build/
+/native-ui/target/
 /.ui-build-cache/
 /.ui-build-stage-*/
 /frontend/

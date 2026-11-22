@@ -1,6 +1,6 @@
 #pragma once
 
-// The audio engine owns the tray and OSD. The Electron frontend is disposable:
+// The audio engine owns the tray and OSD. The native frontend is disposable:
 // closing its window releases its runtime while the native mixer keeps running.
 class DesktopUi {
  HANDLE process=nullptr;
@@ -27,8 +27,8 @@ class DesktopUi {
  }
  void release(){if(process)CloseHandle(process);process=nullptr;processId=0;}
  void fail(DWORD error){
-  std::ofstream(fs::path(exeDir())/L"ui-launch-error.txt")<<"Electron CreateProcess failed: "<<error<<"\n";
-  if(preview)std::ofstream(fs::path(exeDir())/L"test-desktop.txt")<<"FAIL Electron launch "<<error<<"\n";
+  std::ofstream(fs::path(exeDir())/L"ui-launch-error.txt")<<"NovaMix UI CreateProcess failed: "<<error<<"\n";
+  if(preview)std::ofstream(fs::path(exeDir())/L"test-desktop.txt")<<"FAIL UI launch "<<error<<"\n";
   else {
    std::wstring message=L"Impossibile aprire l'interfaccia NovaMix: "+errorText(HRESULT_FROM_WIN32(error))+
     L"\n\nEstrai tutta la cartella dell'applicazione, inclusa frontend. Il mixer resta nell'area di notifica.";
@@ -66,7 +66,7 @@ public:
   release();
   if(!known||exitCode==0)return;
   std::ofstream(fs::path(exeDir())/L"ui-launch-error.txt")
-   <<"Electron exited with code "<<static_cast<LONG>(exitCode)
+   <<"NovaMix UI exited with code "<<static_cast<LONG>(exitCode)
    <<" (unsigned "<<exitCode<<", hex 0x"<<std::hex<<std::uppercase<<exitCode<<").\n";
   if(preview||(stopEvent&&WaitForSingleObject(stopEvent,0)==WAIT_OBJECT_0))return;
   std::wstring message=L"L'interfaccia grafica NovaMix si e chiusa con errore (codice "+
