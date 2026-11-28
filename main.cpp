@@ -66,7 +66,7 @@ struct State {
  std::optional<mix::Levels> wantMix,baseLevels;unsigned long long mixRevision=0,volumeRevision=0;
  std::wstring mixSyncError,volumeSyncError,audioDetails;
  unsigned long long audioCommandRevision=0;bool gentleMix=true;int accent=0;ULONGLONG lastMixEvent=0;
- bool oledMix=true,oledHints=false,overlay=true,keyboardWanted=false,keyboardActive=false;unsigned long long osdSerial=0;
+ bool oledMix=true,oledHints=false,overlay=true,keyboardWanted=false,keyboardActive=false,keyboardRouting=false;unsigned long long osdSerial=0;
  trayStatus::BatterySettings trayBattery;
  std::wstring endpoint=L"Arctis Nova Pro Wireless",audioError,hidError,hidDetails,notice=L"Pronto. Premi Attiva per iniziare.";
  unsigned long long packets=0,mixPackets=0;
@@ -280,6 +280,7 @@ public:
 
 #include "stream_audio.hpp"
 #include "stream_tests.hpp"
+#include "keyboard_routing.hpp"
 
 bool writeReport(const fs::path& file,const State& s){
  std::wostringstream f;f<<L"NovaMix C++ 0.20 — diagnostica\n"<<L"Audio: "<<(s.audio?L"accessibile":L"non accessibile")<<L"\n"<<s.audioError<<L"\nHID: "<<(s.hid?L"accessibile":L"non accessibile")<<L"\n"<<s.hidError<<L"\nMix: PC "<<s.levels.pc<<L" Chat "<<s.levels.chat<<L"\nVolume cuffie: "<<s.physical<<L"\nMicrofono (1=muto, 0=attivo, -1=non disponibile): "<<s.mic<<L"\nPacchetti HID ricevuti: "<<s.packets<<L"\nEventi ChatMix interpretati: "<<s.mixPackets<<L"\n";
@@ -552,7 +553,8 @@ void openDesktopUi(const std::wstring& address);
 HHOOK volumeHook=nullptr;
 LRESULT CALLBACK volumeKeyboardProc(int code,WPARAM wp,LPARAM lp){
  if(code==HC_ACTION&&hotkeys){auto key=reinterpret_cast<KBDLLHOOKSTRUCT*>(lp);int id=key->vkCode==VK_VOLUME_UP?1:key->vkCode==VK_VOLUME_DOWN?2:key->vkCode==VK_VOLUME_MUTE?3:0;
-  if(id){if(wp==WM_KEYDOWN||wp==WM_SYSKEYDOWN)PostMessageW(windowH,WM_HOTKEY,id,0);return 1;}}
+  const auto epoch=keyboardRouting::gate.epoch();
+  if(id&&keyboardRouting::gate.allows(epoch)){if(wp==WM_KEYDOWN||wp==WM_SYSKEYDOWN)PostMessageW(windowH,WM_HOTKEY,id,static_cast<LPARAM>(epoch));return 1;}}
  return CallNextHookEx(volumeHook,code,wp,lp);
 }
 LRESULT CALLBACK coreProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp){
@@ -589,11 +591,13 @@ LRESULT CALLBACK coreProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp){
  case UPDATE:{auto s=snapshot();static unsigned long long lastOsd=0;static bool attempted=false;
   if(!preview&&!smoke)trayStatus::update(hwnd,false,s.mic,s.battery,s.trayBattery,s.english);
   if(s.osdSerial!=lastOsd){lastOsd=s.osdSerial;if(s.overlay)showOsd();}else ++unchangedUpdatesSuppressed;
-  bool want=s.keyboardWanted&&s.enabled&&s.hid&&s.physical>=0;
+  std::array<std::wstring,3> routes;{std::lock_guard<std::mutex> lock(mutexState);routes=streamSetup.selected;}
+  const bool routed=preview?keyboardRouting::gate.allows():keyboardRouting::monitor.refresh(routes);
+  bool want=s.keyboardWanted&&s.enabled&&s.hid&&s.physical>=0&&routed;
   if(!want){if(volumeHook){UnhookWindowsHookEx(volumeHook);volumeHook=nullptr;}hotkeys=false;attempted=false;}
   else if(!attempted){attempted=true;if(preview)hotkeys=true;else{volumeHook=SetWindowsHookExW(WH_KEYBOARD_LL,volumeKeyboardProc,GetModuleHandleW(nullptr),0);hotkeys=volumeHook!=nullptr;}}
-  {std::lock_guard<std::mutex> lock(mutexState);shared.keyboardActive=hotkeys;}return 0;}
- case WM_HOTKEY:{static int beforeMute=50;{std::lock_guard<std::mutex> lock(mutexState);if(!shared.enabled||shared.physical<0)return 0;auto now=GetTickCount64();int target=shared.volumeControl.baseline(shared.physical,now);if(wp==1)target=shared.volumeControl.step(shared.physical,1,now);else if(wp==2)target=shared.volumeControl.step(shared.physical,-1,now);else if(wp==3){if(target){beforeMute=target;target=0;}else target=beforeMute;shared.volumeControl.request(target,now);}else return 0;shared.wantPhysical=target;++shared.volumeRevision;}PostMessageW(hwnd,UPDATE,0,0);return 0;}
+  {std::lock_guard<std::mutex> lock(mutexState);shared.keyboardActive=hotkeys&&keyboardRouting::gate.allows();shared.keyboardRouting=routed;}return 0;}
+ case WM_HOTKEY:if(keyboardRouting::queueVolume(static_cast<int>(wp),static_cast<uint64_t>(lp)))PostMessageW(hwnd,UPDATE,0,0);return 0;
  case trayStatus::callback:
   if (LOWORD(lp)==NIN_SELECT||LOWORD(lp)==NIN_KEYSELECT||LOWORD(lp)==NIN_BALLOONUSERCLICK)
    PostMessageW(hwnd,OPEN_UI,0,0);
@@ -621,7 +625,7 @@ LRESULT CALLBACK coreProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp){
     MessageBoxW(hwnd, english ? L"Could not open the NovaMix audio setup." : L"Impossibile aprire Configura audio NovaMix.", L"NovaMix", MB_OK | MB_ICONWARNING);
   }
   return 0;
- case WM_TIMER:if(wp==42){if(serviceTest){SendMessageW(hwnd,WM_CLOSE,0,0);bool alive=IsWindow(hwnd)&&WaitForSingleObject(stopEvent,0)==WAIT_TIMEOUT;int before=snapshot().master;{std::lock_guard<std::mutex> lock(mutexState);shared.physical=60;}SendMessageW(hwnd,WM_HOTKEY,2,0);{std::lock_guard<std::mutex> lock(mutexState);shared.wantPhysical=-1;shared.volumeControl.observe(60,GetTickCount64());}SendMessageW(hwnd,WM_HOTKEY,2,0);bool volume=snapshot().wantPhysical==mix::hardwarePercent(mix::hardwareVolume(60)+2)&&snapshot().master==before&&SendMessageW(hwnd,GET_VERSION,0,0)==RELEASE;std::ofstream(fs::path(exeDir())/L"test-service.txt")<<(alive&&volume?"PASS":"FAIL")<<": closing window preserves engine; keyboard commands queue physical volume, coalesce repeated keys, preserve software master; version handshake correct\n";if(!alive||!volume)unchangedUpdatesSuppressed=0;}DestroyWindow(hwnd);return 0;}if(wp==6){desktop.poll();if(!preview&&!smoke){auto s=snapshot();tray(hwnd,true,s.english);trayStatus::update(hwnd,false,s.mic,s.battery,s.trayBattery,s.english,false,true);}if(preferencesDirty.exchange(false))savePreferences();}return 0;
+ case WM_TIMER:if(wp==42){if(serviceTest){SendMessageW(hwnd,WM_CLOSE,0,0);bool alive=IsWindow(hwnd)&&WaitForSingleObject(stopEvent,0)==WAIT_TIMEOUT;int before=snapshot().master;{std::lock_guard<std::mutex> lock(mutexState);shared.physical=60;shared.keyboardWanted=true;}keyboardRouting::gate.publish(true,keyboardRouting::gate.epoch());SendMessageW(hwnd,WM_HOTKEY,2,static_cast<LPARAM>(keyboardRouting::gate.epoch()));{std::lock_guard<std::mutex> lock(mutexState);shared.wantPhysical=-1;shared.volumeControl.observe(60,GetTickCount64());}SendMessageW(hwnd,WM_HOTKEY,2,static_cast<LPARAM>(keyboardRouting::gate.epoch()));bool volume=snapshot().wantPhysical==mix::hardwarePercent(mix::hardwareVolume(60)+2)&&snapshot().master==before&&SendMessageW(hwnd,GET_VERSION,0,0)==RELEASE;std::ofstream(fs::path(exeDir())/L"test-service.txt")<<(alive&&volume?"PASS":"FAIL")<<": closing window preserves engine; keyboard commands queue physical volume, coalesce repeated keys, preserve software master; version handshake correct\n";if(!alive||!volume)unchangedUpdatesSuppressed=0;}DestroyWindow(hwnd);return 0;}if(wp==6){desktop.poll();if(!preview&&!smoke){auto s=snapshot();tray(hwnd,true,s.english);trayStatus::update(hwnd,false,s.mic,s.battery,s.trayBattery,s.english,false,true);}if(preferencesDirty.exchange(false))savePreferences();}return 0;
  case WM_QUERYENDSESSION:return TRUE;
  case WM_ENDSESSION:if(wp)DestroyWindow(hwnd);return 0;
  case WM_CLOSE:ShowWindow(hwnd,SW_HIDE);return 0;
@@ -632,11 +636,28 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR,int show){
  int argc;LPWSTR* argv=CommandLineToArgvW(GetCommandLineW(),&argc);std::vector<std::wstring> args(argv,argv+argc);LocalFree(argv);
  if(std::find(args.begin(),args.end(),L"--desktop-self-test")!=args.end())return DesktopUi::selfTest();
  if(std::find(args.begin(),args.end(),L"--stream-self-test")!=args.end())return streamSelfTest();
+ if(std::find(args.begin(),args.end(),L"--keyboard-route-self-test")!=args.end())return keyboardRouting::selfTest();
  if(std::find(args.begin(),args.end(),L"--wheel-self-test")!=args.end())return wheelTest();
  if(std::find(args.begin(),args.end(),L"--self-test")!=args.end())return testCore();
  if(std::find(args.begin(),args.end(),L"--hid-reader-self-test")!=args.end())return Hid::readerTest();
  auto replay=std::find(args.begin(),args.end(),L"--replay-hid");if(replay!=args.end()&&std::next(replay)!=args.end())return replayMute(*std::next(replay));
  auto mixReplay=std::find(args.begin(),args.end(),L"--replay-chatmix");if(mixReplay!=args.end()&&std::next(mixReplay)!=args.end())return replayChatmix(*std::next(mixReplay));
+ auto routingProbe=std::find(args.begin(),args.end(),L"--keyboard-route-inspect");
+ if(routingProbe!=args.end()&&std::distance(routingProbe,args.end())>=3){
+  const HRESULT initialized=CoInitializeEx(nullptr,COINIT_MULTITHREADED);
+  if(FAILED(initialized))return 1;
+  loadPreferences(*std::next(routingProbe));
+  bool registered=keyboardRouting::monitor.start();
+  bool routed=keyboardRouting::monitor.refresh(streamSetup.selected);
+  bool outputHeadset=false;ComPtr<IMMDeviceEnumerator> enumerator;ComPtr<IMMDevice> output;
+  if(SUCCEEDED(CoCreateInstance(__uuidof(MMDeviceEnumerator),nullptr,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(&enumerator)))&&
+     !streamSetup.selected[2].empty()&&SUCCEEDED(enumerator->GetDevice(streamSetup.selected[2].c_str(),&output)))
+   outputHeadset=keyboardRouting::isHeadset(output.Get());
+  std::ofstream report(fs::path(*std::next(routingProbe,2)));
+  report<<"Monitor registered: "<<registered<<"\nConfigured output is Nova: "<<outputHeadset
+        <<"\nWindows default belongs to Nova route: "<<routed<<"\nKeyboard preference: "<<shared.keyboardWanted<<'\n';
+  keyboardRouting::monitor.stop();output.Reset();enumerator.Reset();CoUninitialize();return registered?0:1;
+ }
  if(std::find(args.begin(),args.end(),L"--api-self-test")!=args.end()){WebUi tests;return tests.selfTest();}
  auto diag=std::find(args.begin(),args.end(),L"--diagnose");
  if(diag!=args.end()){
@@ -669,6 +690,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR,int show){
   streamSetup.devices = {{1,L"pc",L"PC Virtual Output"},{2,L"chat",L"Chat Virtual Output"},{3,L"nova",L"Arctis Nova Pro Wireless"}};
   streamSetup.selected = {L"pc",L"chat",L"nova"};
   streamSetup.signal = {38, 62};
+  keyboardRouting::gate.publish(true,keyboardRouting::gate.epoch());
  } else if (!smoke) loadPreferences();
  std::wstring mutexName=(smoke||preview)?L"Local\\NovaMix.Cpp.Preview."+std::to_wstring(GetCurrentProcessId()):L"Local\\NovaMix.Cpp.Active";
  HANDLE singleton=CreateMutexW(nullptr,FALSE,mutexName.c_str());if(GetLastError()==ERROR_ALREADY_EXISTS){auto old=FindWindowW(L"NovaMixService",nullptr);DWORD_PTR running=0;bool same=old&&SendMessageTimeoutW(old,GET_VERSION,0,0,SMTO_ABORTIFHUNG,1000,&running)&&running==RELEASE;if(same)PostMessageW(old,OPEN_UI,0,0);else MessageBoxW(nullptr,L"E gia in esecuzione una versione diversa di NovaMix.\n\nChiudila dal menu vicino all\x0027orologio > Esci. Poi riapri questo eseguibile.\nLa nuova versione non e stata avviata.",L"NovaMix - aggiornamento",MB_OK|MB_ICONINFORMATION);CloseHandle(singleton);return 0;}
@@ -687,9 +709,10 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,LPWSTR,int show){
  (void)show;ShowWindow(windowH,SW_HIDE);
  WebUi web;if(!web.start()){MessageBoxW(nullptr,L"Impossibile avviare l'interfaccia locale.",L"NovaMix",MB_OK);DestroyWindow(windowH);CloseHandle(audioWake);CloseHandle(stopEvent);CloseHandle(singleton);return 1;}
  openWebUi=[&web]{web.open();};if(preview)std::ofstream(fs::path(exeDir())/L"preview-url.txt")<<web.url();
+ if(!preview&&!smoke)keyboardRouting::monitor.start();
  bool backgroundOnly=std::find(args.begin(),args.end(),L"--background")!=args.end();if(!backgroundOnly&&!smoke)PostMessageW(windowH,OPEN_UI,0,0);
  std::thread thread,audioThread;if(!preview){thread=std::thread(worker);audioThread=std::thread(audioWorker);}else PostMessageW(windowH,UPDATE,0,0);MSG msg;while(GetMessageW(&msg,nullptr,0,0)>0){if(!IsDialogMessageW(windowH,&msg)){TranslateMessage(&msg);DispatchMessageW(&msg);}}
- if(audioThread.joinable())audioThread.join();if(thread.joinable())thread.join();desktop.close();web.stop();openWebUi={};if(osdH)DestroyWindow(osdH);CloseHandle(audioWake);CloseHandle(stopEvent);CloseHandle(singleton);DeleteObject(background);DeleteObject(cardBrush);DeleteObject(fontNormal);DeleteObject(fontSmall);DeleteObject(fontTitle);DeleteObject(fontNumber);CoUninitialize();
+ if(audioThread.joinable())audioThread.join();if(thread.joinable())thread.join();desktop.close();web.stop();keyboardRouting::monitor.stop();openWebUi={};if(osdH)DestroyWindow(osdH);CloseHandle(audioWake);CloseHandle(stopEvent);CloseHandle(singleton);DeleteObject(background);DeleteObject(cardBrush);DeleteObject(fontNormal);DeleteObject(fontSmall);DeleteObject(fontTitle);DeleteObject(fontNumber);CoUninitialize();
  if(smoke){bool pass=unchangedUpdatesSuppressed>=99;std::ofstream(fs::path(exeDir())/L"smoke-risultato.txt")<<(pass?"PASS":"FAIL")<<": native window created, message loop and worker exited; unchanged UI updates suppressed: "<<unchangedUpdatesSuppressed<<"\n";return pass?0:1;}
  return 0;
 }

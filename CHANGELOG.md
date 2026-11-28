@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.21.0-alpha.3 — keyboard volume follows the selected output
+
+- Suspends keyboard volume interception when the Windows default output is outside the Nova route, so Bluetooth speakers, HDMI and other outputs retain normal Windows volume/mute controls.
+- Automatically restores physical headset volume keys when returning to NovaMix PC/Chat routed to the Nova headset, or directly to the Nova headset.
+- Uses endpoint IDs and the adapter property, so renamed stream outputs still work. If NovaMix is configured to play through another device, virtual-stream defaults do not capture headset volume keys.
+- Reacts to default-output/device notifications, releases the capture gate immediately and rejects stale keyboard commands queued before a route switch.
+- Adds keyboard routing diagnostics and regression tests for route switching, notification roles, mute, disabled/stopped states and queued command invalidation.
+
 ## 0.21.0-alpha.2 — scrolling and window layout
 
 - Uses Direct3D 12 accelerated Iced rendering, retaining a software fallback.

@@ -1,6 +1,6 @@
 # Native Iced interface preview
 
-Version: **0.21.0-alpha.2**, Windows 11 x64.
+Version: **0.21.0-alpha.3**, Windows 11 x64.
 
 This is the first stage of NovaMix's Rust migration: a real native desktop panel connected to the existing C++ engine. It is not a complete Rust rewrite of the audio/HID engine. The native installer does not contain Electron, Chromium, Node.js, a JavaScript frontend or WebView2. Iced uses wgpu/Direct3D 12 acceleration and falls back to Tiny Skia if GPU initialization is unavailable. Release builds optimize for execution speed.
 
@@ -19,6 +19,10 @@ Wheel notches animate inside the scroll widget without rebuilding the entire app
 - Close-to-tray behavior: closing the window exits the Iced panel, while the engine keeps running. Open NovaMix from the tray to launch the panel again. Quit stops the engine.
 
 The headset wheel, OLED drawing, actual audio processing and tray icons remain owned by the existing engine. They continue working while the panel is closed. VB-CABLE and Windows application routing work as in 0.20.12; no driver reinstall is required for an existing working configuration.
+
+Keyboard volume interception follows the Windows default output. It applies to NovaMix PC/Chat when playback is routed to the Nova headset, or to a direct Nova default endpoint. Selecting an external Windows default output releases keyboard volume and mute to Windows immediately. The preference remains enabled, so returning to Nova restores physical headset control. The adapter property identifies the headset, and stable endpoint IDs identify PC/Chat; user-facing endpoint renames do not change routing. The low-level keyboard callback performs no audio-device queries. Default/device notifications invalidate capture immediately, and old queued commands cannot change the headset after a switch.
+
+The `--keyboard-route-self-test` engine flag checks this policy and notification/queue behavior without touching real audio. The optional `--keyboard-route-inspect <preferences.ini> <report.txt>` flag performs a read-only system routing check and reports booleans only, without endpoint identifiers or names. It does not install a keyboard hook, change defaults or alter audio.
 
 ## Updating and returning to stable
 

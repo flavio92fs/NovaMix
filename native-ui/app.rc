@@ -1,8 +1,8 @@
 #include <windows.h>
 1 ICON "../assets/NovaMix.ico"
 1 VERSIONINFO
- FILEVERSION 0,21,0,2
- PRODUCTVERSION 0,21,0,2
+ FILEVERSION 0,21,0,3
+ PRODUCTVERSION 0,21,0,3
  FILETYPE VFT_APP
 BEGIN
  BLOCK "StringFileInfo"
@@ -11,8 +11,8 @@ BEGIN
   BEGIN
    VALUE "FileDescription", "NovaMix - Native Iced interface"
    VALUE "ProductName", "NovaMix"
-   VALUE "FileVersion", "0.21.0-alpha.2"
-   VALUE "ProductVersion", "0.21.0-alpha.2"
+   VALUE "FileVersion", "0.21.0-alpha.3"
+   VALUE "ProductVersion", "0.21.0-alpha.3"
   END
  END
  BLOCK "VarFileInfo"

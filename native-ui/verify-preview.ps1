@@ -6,7 +6,7 @@ $folder = (Resolve-Path -LiteralPath $AppDirectory).ProviderPath
 $enginePath = Join-Path $folder 'NovaMix.exe'
 $uiPath = Join-Path $folder 'frontend\NovaMixUi.exe'
 $resultPath = Join-Path $folder 'test-iced-integration.txt'
-foreach ($flag in @('--self-test','--api-self-test','--desktop-self-test','--stream-self-test')) {
+foreach ($flag in @('--self-test','--api-self-test','--desktop-self-test','--stream-self-test','--keyboard-route-self-test','--service-self-test')) {
     $test = Start-Process -FilePath $enginePath -ArgumentList $flag -WorkingDirectory $folder -PassThru -WindowStyle Hidden
     if (!$test.WaitForExit(30000)) { Stop-Process -Id $test.Id; throw ('Engine test timed out: ' + $flag) }
     if ($test.ExitCode) { throw ('Engine test failed: ' + $flag) }

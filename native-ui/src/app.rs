@@ -936,8 +936,8 @@ impl App {
                     "Use keyboard volume controls"
                 ),
                 self.t(
-                    "La rotella e i tasti regolano il volume fisico delle cuffie.",
-                    "The wheel and volume keys adjust physical headset volume."
+                    "Sulle Nova regolano le cuffie. Sulle altre uscite torna il volume di Windows.",
+                    "Controls headset volume on Nova routes. Other outputs keep normal Windows volume keys."
                 ),
                 "keyboard",
                 s.keyboard,

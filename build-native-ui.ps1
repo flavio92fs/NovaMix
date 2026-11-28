@@ -37,7 +37,7 @@ try {
         if ($LASTEXITCODE) { throw 'Native UI build failed.' }
         New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'native-ui\target\release\NovaMixUi.exe') -Destination (Join-Path $OutputDirectory 'NovaMixUi.exe') -Force
-        Set-Content -LiteralPath (Join-Path $OutputDirectory 'version') -Value 'iced-0.21.0-alpha.2' -Encoding Ascii
+        Set-Content -LiteralPath (Join-Path $OutputDirectory 'version') -Value 'iced-0.21.0-alpha.3' -Encoding Ascii
         & (Join-Path $PSScriptRoot 'native-ui\package-licenses.ps1') -CargoPath $CargoPath -Destination (Join-Path $OutputDirectory 'licenses')
         Get-Item -LiteralPath (Join-Path $OutputDirectory 'NovaMixUi.exe') | Select-Object Name,Length
     }

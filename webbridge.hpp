@@ -78,7 +78,7 @@ void loadPreferences(const fs::path& filename=fs::path(exeDir())/L"streams.ini")
 std::string stateJson(){
  std::lock_guard<std::mutex> lock(mutexState);
  const auto& s=shared;auto displayed=mix::volumeDisplay(s.physical,s.volumeControl,GetTickCount64());std::ostringstream j;
- j<<"{\"version\":\"0.21.0-alpha.2\",\"enabled\":"<<s.enabled<<",\"accent\":"<<s.accent<<",\"gentleMix\":"<<s.gentleMix<<",\"audio\":"<<s.audio<<",\"hid\":"<<s.hid<<",\"game\":"<<s.levels.pc<<",\"chat\":"<<s.levels.chat<<",\"balance\":"<<mix::position(s.levels)<<",\"baseGame\":"<<(s.baseLevels?s.baseLevels->pc:-1)<<",\"baseChat\":"<<(s.baseLevels?s.baseLevels->chat:-1)<<",\"master\":"<<s.master<<",\"physical\":"<<s.physical<<",\"physicalDisplay\":"<<displayed.percent<<",\"physicalPending\":"<<displayed.pending<<",\"mic\":"<<s.mic<<",\"battery\":"<<s.battery<<",\"chargerBattery\":"<<s.chargerBattery<<",\"charging\":"<<s.charging<<",\"overlay\":"<<s.overlay<<",\"keyboard\":"<<s.keyboardWanted<<",\"keyboardActive\":"<<s.keyboardActive<<",\"oled\":"<<s.oledHints<<",\"oledMix\":"<<s.oledMix<<",\"preview\":"<<preview<<",\"device\":"<<jsonText(s.endpoint)<<",\"notice\":"<<jsonText(s.notice)<<",\"error\":"<<jsonText(s.audioError)<<",\"hidError\":"<<jsonText(s.hidError)<<",\"syncError\":"<<jsonText(s.mixSyncError)<<",\"volumeSyncError\":"<<jsonText(s.volumeSyncError)<<"}";
+ j<<"{\"version\":\"0.21.0-alpha.3\",\"enabled\":"<<s.enabled<<",\"accent\":"<<s.accent<<",\"gentleMix\":"<<s.gentleMix<<",\"audio\":"<<s.audio<<",\"hid\":"<<s.hid<<",\"game\":"<<s.levels.pc<<",\"chat\":"<<s.levels.chat<<",\"balance\":"<<mix::position(s.levels)<<",\"baseGame\":"<<(s.baseLevels?s.baseLevels->pc:-1)<<",\"baseChat\":"<<(s.baseLevels?s.baseLevels->chat:-1)<<",\"master\":"<<s.master<<",\"physical\":"<<s.physical<<",\"physicalDisplay\":"<<displayed.percent<<",\"physicalPending\":"<<displayed.pending<<",\"mic\":"<<s.mic<<",\"battery\":"<<s.battery<<",\"chargerBattery\":"<<s.chargerBattery<<",\"charging\":"<<s.charging<<",\"overlay\":"<<s.overlay<<",\"keyboard\":"<<s.keyboardWanted<<",\"keyboardActive\":"<<s.keyboardActive<<",\"oled\":"<<s.oledHints<<",\"oledMix\":"<<s.oledMix<<",\"preview\":"<<preview<<",\"device\":"<<jsonText(s.endpoint)<<",\"notice\":"<<jsonText(s.notice)<<",\"error\":"<<jsonText(s.audioError)<<",\"hidError\":"<<jsonText(s.hidError)<<",\"syncError\":"<<jsonText(s.mixSyncError)<<",\"volumeSyncError\":"<<jsonText(s.volumeSyncError)<<"}";
  j.seekp(-1, std::ios_base::end);
  j << ",\"language\":" << s.english << ",\"batteryPercent\":" << s.trayBattery.showPercent
    << ",\"batteryBackground\":" << s.trayBattery.background
@@ -91,6 +91,7 @@ std::string stateJson(){
    << ",\"batteryLow\":" << s.trayBattery.low
    << ",\"batteryMedium\":" << s.trayBattery.medium
    << ",\"batteryNormal\":" << s.trayBattery.normal
+   << ",\"keyboardRouting\":" << s.keyboardRouting
    << ",\"runningRequested\":" << s.wantEnabled
    << ",\"routeReady\":" << streamSetup.ready() << ",\"routes\":[";
  for (size_t i = 0; i < streamSetup.selected.size(); ++i) {
@@ -213,7 +214,9 @@ public:
    const auto s = snapshot();
    auto label = [&s](const wchar_t* italian, const wchar_t* english) { return s.english ? english : italian; };
    std::wostringstream f;
-   f << L"NovaMix 0.21.0-alpha.2\nAudio: " << s.audio << L"\n" << s.audioError
+   f << L"NovaMix 0.21.0-alpha.3\nAudio: " << s.audio << L"\n" << s.audioError
+     << label(L"\nTastiera volume: opzione/percorso/attiva: ",L"\nKeyboard volume: preference/route/active: ")
+     << s.keyboardWanted << L"/" << s.keyboardRouting << L"/" << s.keyboardActive
      << L"\nHID: " << s.hid << L"\n" << s.hidError
      << label(L"\nMicrofono: ", L"\nMicrophone: ") << s.mic
      << label(L"\nVolume confermato/target raw/in attesa: ", L"\nConfirmed volume/raw target/pending: ")

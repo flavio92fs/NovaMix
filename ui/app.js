@@ -271,7 +271,7 @@ function render(s){
  let message=[s.syncError, s.volumeSyncError].filter(Boolean).map(tr).join(' ');
  if(s.error)message=language==='en' ? 'Could not start or continue audio playback. Export diagnostics from Settings.' : s.error;
  else if(s.enabled&&s.hidError)message=tr('Il mixer software è attivo, ma il controllo USB richiede una verifica. Puoi esportare la diagnostica dalle Preferenze.');
- else if(s.keyboard&&!s.keyboardActive&&s.enabled)message=s.physical<0?tr('Muovi la rotella delle cuffie una volta: serve il volume iniziale per usare la tastiera.'):tr('I tasti volume non sono stati acquisiti. Un altro programma potrebbe già gestirli.');
+ else if(s.keyboard&&!s.keyboardActive&&s.enabled&&s.keyboardRouting)message=s.physical<0?tr('Muovi la rotella delle cuffie una volta: serve il volume iniziale per usare la tastiera.'):tr('I tasti volume non sono stati acquisiti. Un altro programma potrebbe già gestirli.');
  if (!message && s.notice === 'Impossibile salvare le preferenze in questa cartella.') message = s.notice;
  $('alert').hidden=!message;setText('alert',tr(message));
 }

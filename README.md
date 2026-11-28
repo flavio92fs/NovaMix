@@ -2,13 +2,13 @@
 
 NovaMix is an open-source ChatMix controller for the **SteelSeries Arctis Nova Pro Wireless**. Balance PC audio and chat apps from the headset wheel or the desktop mixer. NovaMix mixes two audio streams and leaves each app’s own Windows volume where you set it.
 
-**Native UI preview — 0.21.0-alpha.2:** This branch replaces the Electron panel with a Rust/Iced interface. The native installer contains no Electron, Chromium, Node.js or WebView2 runtime. The tested C++ audio/HID engine is retained for this first migration stage. See [native UI notes](docs/NATIVE-UI.md) for scope, builds and verification.
+**Native UI preview — 0.21.0-alpha.3:** This branch replaces the Electron panel with a Rust/Iced interface. The native installer contains no Electron, Chromium, Node.js or WebView2 runtime. The tested C++ audio/HID engine is retained for this first migration stage. See [native UI notes](docs/NATIVE-UI.md) for scope, builds and verification.
 
 ![NovaMix mixer in English, shown with demo data](docs/mixer.png)
 
 ## Download
 
-Download the **[native Iced preview installer for Windows x64](https://github.com/flavio92fs/NovaMix/releases/download/v0.21.0-alpha.2/NovaMix-Setup-x64.exe)** and its [SHA-256 checksum](https://github.com/flavio92fs/NovaMix/releases/download/v0.21.0-alpha.2/NovaMix-Setup-x64.exe.sha256). The [stable release](https://github.com/flavio92fs/NovaMix/releases/latest) remains available separately.
+Download the **[native Iced preview installer for Windows x64](https://github.com/flavio92fs/NovaMix/releases/download/v0.21.0-alpha.3/NovaMix-Setup-x64.exe)** and its [SHA-256 checksum](https://github.com/flavio92fs/NovaMix/releases/download/v0.21.0-alpha.3/NovaMix-Setup-x64.exe.sha256). The [stable release](https://github.com/flavio92fs/NovaMix/releases/latest) remains available separately.
 
 **Requirements:** Windows 11 x64, an Arctis Nova Pro Wireless base connected by USB for hardware controls, and two distinct Windows playback endpoints to use as input streams. The included wizard is designed for one standard VB-CABLE endpoint and an unused digital output, such as S/PDIF. If your PC has no usable spare digital output, supply another distinct virtual playback endpoint and choose it in **Streams**. The final playback output must be a third endpoint.
 
@@ -35,7 +35,7 @@ You can use a different playback device, such as Bluetooth speakers. Select **St
 ## Controls and system tray
 
 - **ChatMix** balances PC and Chat. At the center, both streams are at full level. The mix volume adjusts the combined output.
-- **Headset volume** adjusts the base’s physical volume. **Use keyboard volume controls** lets compatible media keys or wheels adjust that physical level. The base may show its own temporary volume pop-up.
+- **Headset volume** adjusts the base’s physical volume. **Use keyboard volume controls** lets compatible media keys or wheels adjust that physical level while the Windows default output belongs to the Nova route. Selecting Bluetooth speakers, HDMI or another external Windows output automatically restores normal Windows volume/mute keys; returning to Nova restores headset control. Renamed PC/Chat endpoints are matched by ID. If NovaMix plays to another output instead of the Nova headset, it does not take over the headset volume keys for virtual-stream defaults. The base may show its own temporary volume pop-up.
 - **System tray** shows hardware microphone mute and headset battery status. Enable **Show battery level as digits** for compact Segoe UI numbers. Use **Battery number background** to switch between a colored background with white digits and transparent icons with colored digits. The three battery colors follow your low and medium thresholds. **Number size** adjusts the font from 8 to 16 pixels at 100% scaling, with 12 pixels as the default. **Background size** adjusts the square independently from 8 to 16 pixels. At 16 pixels it fills the tray icon area, with the size following Windows display scaling. Hover to see the full percentage. You can configure three colors, both thresholds and an optional low-battery notification. Pin the icons in Windows taskbar settings if they appear in the overflow menu.
 - **Base display** can show ChatMix, physical volume, hardware mute and battery readings. Those readings use the levels reported by the headset and base. Turning the display option off restores the base’s own menus.
 - **Settings → Language / Lingua** switches between **English** and **Italiano** and saves your preference. Windows display language determines the default. Closing the panel keeps the mixer running. Use **Quit** in the tray menu to stop it.
